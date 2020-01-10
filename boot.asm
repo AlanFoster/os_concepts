@@ -10,23 +10,24 @@ boot:
 
     cli
 
-    mov bx, WELCOME_MSG
-    call print_string
+    mov [BOOT_DRIVE], dl
 
-    mov dx, 0x0123
-    call print_binary
+    mov bx, DISK_READ_MSG
+    call println_string
+
+    ; Preparing to read after the boot sector from the disk
+    mov bp, 0x8000             ; Move our base stack somewhere safe
+    mov sp, bp                 ; Move our stack pointer somewhere safe
+
+    mov bx, 0x9000             ; Load 5 sectors to 0x0000 (ES):0x9000 (BX)
+    mov dh, 5                  ; Specify read 5 sectors
+    mov dl, [BOOT_DRIVE]       ; Specify which drive
+    call disk_load
+
+    mov dx, [0x9000]           ; Print values which are stored beyond 512 bytes in our boot disk
     call print_hex
 
-    mov dx, 0x4567
-    call print_binary
-    call print_hex
-
-    mov dx, 0x89AB
-    call print_binary
-    call print_hex
-
-    mov dx, 0xCDEF
-    call print_binary
+    mov dx, [0x9000 + 512]
     call print_hex
 
     jmp halt
@@ -35,13 +36,47 @@ halt:
     hlt                        ; Stop
 
 ; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-; Helpers
+; Disk Helpers
+; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+; Load DH sectors to ES:BX from drive DL, with DH sectors
+disk_load:
+  push dx
+
+  ; Set up bios read disk call
+  ; https://en.wikipedia.org/wiki/INT_13H#INT_13h_AH=02h:_Read_Sectors_From_Drive
+
+  mov ah, 0x02                ; bios readw sector
+  mov dl, dl                  ; which drive to read, disk 0 for floppy
+  mov al, dh                  ; How many sectors to read
+  mov ch, 0x00                ; Which cylinder to read
+  mov dh, 0x00                ; Which head to use, 0 for read, 1 for write, 0 based
+  mov cl, 0x02                ; Which sector to read from the track, 1 based
+  mov bx, bx                  ; copy target
+
+  int 0x13                    ; bios call to read sectors from drive
+
+  jc disk_error               ; CF should be clear if no error
+
+  pop dx                      ; Restore pushed dx register
+  cmp dh, al                  ; al is the actual sectors read, ensure that read = expected
+  jne disk_error
+
+  ret
+
+disk_error:
+  mov bx, DISK_ERROR_MSG
+  call println_string
+  jmp $
+
+; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; String Helpers
 ; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 HEX_OUT:
-    db "0x0000", 0x0d, 0x0a, 0 ; Placeholder in memory to store the computation of converting a value in memory to hex, used by print_hex, with extra newline and carriage return added
+    db "0x0000", 0 ; Placeholder in memory to store the computation of converting a value in memory to hex, used by print_hex
 
-                               ; Prints the hex value currently stored within the dx register
+; Prints the hex value currently stored within the dx register
 print_hex:
   pusha                        ; Preserve the original registers
   mov cx, 5                    ; Temporary pointer index to HEX_OUT, decremented on each loop, used to slot in the hex values within the array of chars
@@ -72,7 +107,7 @@ print_hex:
 
 .end:
   mov bx, HEX_OUT              ; After mutating HEX_OUT directly, print it as a normal string
-  call print_string
+  call println_string
 
   popa                         ; Normal function clean up
   ret
@@ -108,7 +143,20 @@ print_binary:
   popa
   ret
 
-; Prints the 0 terminated string which is indexed by the bx register
+; Prints the 0 terminated string which is indexed by the bx register, with a new line
+println_string:
+  pusha
+
+  mov bx, bx
+  call print_string
+
+  mov bx, NEW_LINE
+  call print_string
+
+  popa
+  ret
+
+; Prints the given 0 terminated string indexed by the bx register, without a new line
 print_string:
   pusha
   mov ah, 0x0e
@@ -129,8 +177,16 @@ print_string:
 ; Constants
 ; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-WELCOME_MSG:
-    db "Welcome!", 0
+DISK_READ_MSG:
+    db "Reading disk...", 0
+
+DISK_ERROR_MSG:
+    db "Disk read error!", 0
+
+NEW_LINE:
+  db 0x0d, 0x0a, 0 ; 0 terminated string withnewline and carriage return
+
+BOOT_DRIVE: db 0
 
 ; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;  Magic boot marker
@@ -139,3 +195,6 @@ WELCOME_MSG:
 ; Mark the device as bootable
 times 510-($-$$) db 0          ; Add any additional zeroes to make 510 bytes in total
 dw 0xAA55                      ; Write the final 2 bytes as the magic number 0x55aa, remembering x86 little endian
+
+times 256 dw 0xdada
+times 256 dw 0xface
