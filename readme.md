@@ -17,6 +17,32 @@ Build and start qemu:
 make run
 ```
 
+## Setting up the cross compiler
+
+The cross compiler can either run within docker, or can be installed on your host machine:
+
+```
+./install_crosscompiler.sh binutils
+./install_crosscompiler.sh gcc
+```
+
+This will enable access to both `i686-elf-gcc` and `i686-elf-ld`, which can be used to compile the OS.
+
+## Using docker
+
+It might be useful to run the cross compiler within docker. To run an interactive terminal within the current directory:
+
+```
+docker build -t osbuilder .
+docker run --rm -it -v $(pwd):$(pwd) -w $(pwd) osbuilder
+```
+
+The OS image can then be created within docker via:
+
+```
+make
+```
+
 ## Debugging
 
 Ensure gdb is available and you have installed [gdb-dashboard](https://github.com/cyrus-and/gdb-dashboard):

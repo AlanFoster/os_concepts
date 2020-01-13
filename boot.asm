@@ -1,5 +1,6 @@
 bits 16                        ; We're dealing with 16 bit code currently
 org 0x7c00                     ; Inform the assembler of the starting location for this code
+KERNEL_OFFSET equ 0x1000       ; Kernel offset is hard coded, and explicitly set the linker too
 
 boot:
     mov ax, 0x3
@@ -14,8 +15,8 @@ boot:
     mov bp, 0x8000             ; Move our base stack somewhere safe
     mov sp, bp                 ; Move our stack pointer somewhere safe
 
-    mov bx, 0x9000             ; Load the sectors to 0x0000 (ES):0x9000 (BX)
-    mov dh, 5                 ; Specify how many sectors to read
+    mov bx, KERNEL_OFFSET          ; Load the sectors to 0x0000 (ES):KERNEL_OFFSET (BX)
+    mov dh, 15                 ; Specify how many sectors to read
     mov dl, [BOOT_DRIVE]       ; Specify which drive
     call disk_load
 
@@ -245,14 +246,6 @@ NEW_LINE:
 BOOT_DRIVE: db 0
 
 ; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;  Magic boot marker
-; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-; Mark the device as bootable
-times 510-($-$$) db 0          ; Add any additional zeroes to make 510 bytes in total
-dw 0xAA55                      ; Write the final 2 bytes as the magic number 0x55aa, remembering x86 little endian
-
-; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;  32-bit protected mode begins
 ; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -270,7 +263,7 @@ initialize_protected_mode:
   mov esp, ebp
 
   call write_smiley_face
-
+  call start_kernel
   jmp $
 
 write_smiley_face:
@@ -282,4 +275,15 @@ write_smiley_face:
   mov al, ')'
   mov [0xb8000 + 162], ax
 
+  ret
+
+start_kernel:
+  call $KERNEL_OFFSET
   jmp $
+; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;  Magic boot marker
+; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+; Mark the device as bootable
+times 510-($-$$) db 0          ; Add any additional zeroes to make 510 bytes in total
+dw 0xAA55                      ; Write the final 2 bytes as the magic number 0x55aa, remembering x86 little endian

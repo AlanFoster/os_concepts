@@ -1,0 +1,5 @@
+# Ignore all files by default
+*
+
+# Only the crosscompiler setup script is required when building the docker image
+!install_crosscompiler.sh

@@ -1,4 +1,5 @@
 *.bin
 *.out
+*.o
 *.img
 .gdb_history
