@@ -2,35 +2,25 @@ bits 16                        ; We're dealing with 16 bit code currently
 org 0x7c00                     ; Inform the assembler of the starting location for this code
 
 boot:
-    mov ax, 0x2401
-    int 0x15                   ; Enable the A20 line, or addressing line 20, so that the CPU can access beyond 1mb of data
-
     mov ax, 0x3
     int 0x10                   ; set vga text mode 3, provides text interface 80 characters wide, 25 chars per line per screen
 
-    cli
-
-    mov [BOOT_DRIVE], dl
+    mov [BOOT_DRIVE], dl       ; On boot, the dl register should be set to the current boot drive
 
     mov bx, DISK_READ_MSG
     call println_string
 
-    ; Preparing to read after the boot sector from the disk
+    ; Preparing to read more than the 512 bytes that was loaded by BIOS.
     mov bp, 0x8000             ; Move our base stack somewhere safe
     mov sp, bp                 ; Move our stack pointer somewhere safe
 
-    mov bx, 0x9000             ; Load 5 sectors to 0x0000 (ES):0x9000 (BX)
-    mov dh, 5                  ; Specify read 5 sectors
+    mov bx, 0x9000             ; Load the sectors to 0x0000 (ES):0x9000 (BX)
+    mov dh, 5                 ; Specify how many sectors to read
     mov dl, [BOOT_DRIVE]       ; Specify which drive
     call disk_load
 
-    mov dx, [0x9000]           ; Print values which are stored beyond 512 bytes in our boot disk
-    call print_hex
-
-    mov dx, [0x9000 + 512]
-    call print_hex
-
-    jmp halt
+    call enable_protected_mode
+    jmp halt ; This should never occur
 
 halt:
     hlt                        ; Stop
@@ -46,7 +36,7 @@ disk_load:
   ; Set up bios read disk call
   ; https://en.wikipedia.org/wiki/INT_13H#INT_13h_AH=02h:_Read_Sectors_From_Drive
 
-  mov ah, 0x02                ; bios readw sector
+  mov ah, 0x02                ; bios read sector
   mov dl, dl                  ; which drive to read, disk 0 for floppy
   mov al, dh                  ; How many sectors to read
   mov ch, 0x00                ; Which cylinder to read
@@ -68,6 +58,72 @@ disk_error:
   mov bx, DISK_ERROR_MSG
   call println_string
   jmp $
+
+; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; Global descriptor table - used to describe the segments within
+; memory. This contains the null segment, code segment, and data
+; segment. In this case the approach taken is a basic flat model,
+; where both the code and data segments overlap for 4GB, without
+; any attempt to separate them. This is not good for security.
+; There is no use of paging features for virtual memory either.
+;
+; Layout: https://wiki.osdev.org/Global_Descriptor_Table
+; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+gdt_start:
+gdt_null_descriptor:
+  dq 0 ; 8-byte, 64-bit, null descriptor
+
+gdt_code_descriptor:
+  ; base=0x0, limit=0xfffff
+  ; 1st flags: (present, always 1) 1 (privilege level) 00 (descrptor type, 1 for code or data) 1
+  ; type flags: (executable) 1 (conforming) 1 (readable) 1 (accesssesd) 0
+  ; 2nd flags: (granularity, 0=1byte,1=4kbyte) 1 (operand size, 0=16bit, 1=32bit) (always 0) 0 (AVL - Available for system use) 0
+  dw 0xffff      ; Segment limit, bits 0-15
+  dw 0           ; Segment base, bits 0-15
+  db 0           ; Segment base, bits 16-23
+  db 10011010b   ; Segment access byte, who has access to this memory. Marked as code.
+  db 11001111b   ; High 4 bits = flags influencing segment size, lower 4 bit segment limit, bits 16-19
+  db 0           ; Segment base, 24-31 bits
+
+gdt_data_descriptor:
+  ; Same as code section, but:
+  ; type flags: (executable) 0 (expand down) 0 (writable) 1 (accesssesd) 0
+  dw 0xffff      ; Segment limit, bits 0-15
+  dw 0           ; Segment base, bits 0-15
+  db 0           ; Segment base, bits 16-23
+  db 10010010b   ; Segment access byte, who has access to this memory. Marked as data.
+  db 11001111b   ; High 4 bits = flags influencing segment size, lower 4 bit segment limit, bits 16-19
+  db 0           ; Segment base, 24-31 bits
+
+gdt_end:           ; Empty label for simple gdt size calculations belows
+gdt_pointer:
+  dw gdt_end - gdt_start -1 ; gdt size
+  dd gdt_start              ; gdt offset
+
+; Constants for GDT segment descriptor offsets
+CODE_SEG equ gdt_code_descriptor - gdt_start
+DATA_SEG equ gdt_data_descriptor - gdt_start
+
+; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; Protected mode
+; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+enable_protected_mode:
+.enable_a20_address_line:
+    mov ax, 0x2401
+    int 0x15                   ; Enable the A20 line, or addressing line 20, so that the CPU can access beyond 1mb of data
+.clear_interupt_table:
+    cli
+.enable_protected_mode_within_control_register:
+    ; Reading the current value of the control register, and setting the protected mode bit
+    mov eax, cr0
+    or eax, 0x1  ; Setting the protected bit on the CPU reg cr0
+    mov cr0, eax ; Updating the cr0 reg
+.load_global_descriptor_table:
+    lgdt [gdt_pointer]
+    jmp CODE_SEG:initialize_protected_mode ; long jump into the protected mode segment
+    ; This additionally forces the cpu to drop any pre-fetched 16 bit instructinos, in preparation for 32 bit mode
 
 ; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; String Helpers
@@ -196,5 +252,34 @@ BOOT_DRIVE: db 0
 times 510-($-$$) db 0          ; Add any additional zeroes to make 510 bytes in total
 dw 0xAA55                      ; Write the final 2 bytes as the magic number 0x55aa, remembering x86 little endian
 
-times 256 dw 0xdada
-times 256 dw 0xface
+; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;  32-bit protected mode begins
+; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+[bits 32]
+
+initialize_protected_mode:
+  mov ax, DATA_SEG          ; Replacing the old segment registers with the new data segment, defined within the GDT
+  mov ds, ax
+  mov es, ax
+  mov fs, ax
+  mov gs, ax
+  mov ss, ax
+
+  mov ebp, 0x90000          ; Initializing the stack position in free space
+  mov esp, ebp
+
+  call write_smiley_face
+
+  jmp $
+
+write_smiley_face:
+  mov ah, 0x3f
+
+  mov al, ':'
+  mov [0xb8000 + 160], ax
+
+  mov al, ')'
+  mov [0xb8000 + 162], ax
+
+  jmp $
