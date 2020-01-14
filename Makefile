@@ -2,8 +2,8 @@
 # $< = first dependency
 # $^ = all dependencies
 
-C_SOURCES = $(wildcard kernel/*.c)
-HEADERS = $(wildcard kernel/*.h)
+C_SOURCES = $(wildcard kernel/*.c drivers/*.c)
+HEADERS = $(wildcard kernel/*.h drivers/*.h)
 OBJ = ${C_SOURCES:.c=.o}
 # Debugging symbols enabled
 CFLAGS = -g
@@ -24,9 +24,9 @@ os.img: boot/bootloader.bin kernel.bin
 
 disk.img: os.img
 	dd if=/dev/zero of=$@ bs=512 count=2880
-	dd conv=notrunc if=$< of=$@ bs=512 count=3 seek=0
+	dd conv=notrunc if=$< of=$@ seek=0
 
-%.o: %.c
+%.o: %.c ${HEADERS}
 	${CC} ${CFLAGS} -ffreestanding -c $< -o $@
 
 %.o: %.asm
@@ -43,4 +43,4 @@ debug: disk.img kernel.elf
 
 clean:
 	rm -rf *.bin *.img *.o *.elf
-	rm -rf kernel/*.o boot/*.o
+	rm -rf kernel/*.o drivers/*.o boot/*.bin boot/*.o
