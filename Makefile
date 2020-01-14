@@ -2,15 +2,19 @@
 # $< = first dependency
 # $^ = all dependencies
 
+C_SOURCES = $(wildcard kernel/*.c)
+HEADERS = $(wildcard kernel/*.h)
+OBJ = ${C_SOURCES:.c=.o}
+
 CC = ~/opt/cross/bin/i686-elf-gcc
 LD = ~/opt/cross/bin/i686-elf-ld
 
 build: disk.img
 
-kernel.bin: kernel_entry.o kernel.o
+kernel.bin: kernel/kernel_entry.o ${OBJ}
 	$(LD) -o $@ -Ttext 0x1000 $^ --oformat binary
 
-os.img: bootloader.bin kernel.bin
+os.img: boot/bootloader.bin kernel.bin
 	cat $^ > $@
 
 disk.img: os.img
@@ -34,3 +38,4 @@ debug: disk.img
 
 clean:
 	rm -rf *.bin *.img *.o
+	rm -rf kernel/*.o boot/*.o
