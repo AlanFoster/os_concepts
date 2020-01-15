@@ -1,5 +1,7 @@
 #include <stdint.h>
 #include "screen.h"
+#include "ports.h"
+#include "../kernel/util.h"
 
 #define VIDEO_ADDRESS 0xb8000
 #define MAX_ROWS 25
@@ -27,6 +29,14 @@ void set_cursor_offset(int offset) {
     port_byte_out(VGA_PORT_DATA, (unsigned char)(offset >> 8));
     port_byte_out(VGA_PORT_CTRL, VGA_PORT_LOW_CURSOR_BITS);
     port_byte_out(VGA_PORT_DATA, (unsigned char)(offset & 0xff));
+}
+
+void scroll_up() {
+    memory_copy(
+        ((char *) VIDEO_ADDRESS),
+        ((char *) VIDEO_ADDRESS) + get_terminal_offset(1, 0),
+        get_terminal_offset(MAX_ROWS, MAX_COLS)
+    );
 }
 
 void clear_screen() {
@@ -72,13 +82,19 @@ void print_char(char c) {
     } else {
         print_char_at(c, terminal_row, terminal_column);
         terminal_column++;
-        if (terminal_column > MAX_COLS) {
+        if (terminal_column >= MAX_COLS) {
             terminal_row++;
             terminal_column = 0;
         }
     }
 
     int offset = get_terminal_offset(terminal_row, terminal_column);
+
+    if (terminal_row >= MAX_ROWS) {
+        scroll_up();
+        terminal_row--;
+    }
+
     set_cursor_offset(offset);
 }
 
