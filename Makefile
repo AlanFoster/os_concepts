@@ -10,6 +10,7 @@ CFLAGS = -g
 
 CC = ~/opt/cross/bin/i686-elf-gcc
 LD = ~/opt/cross/bin/i686-elf-ld
+GDB = ~/opt/cross/bin/i686-elf-gdb
 
 build: disk.img
 
@@ -39,7 +40,7 @@ run: disk.img
 	qemu-system-x86_64 -blockdev driver=file,node-name=f0,filename=$< -device floppy,drive=f0
 
 debug: disk.img kernel.elf
-	gdb -x debug.gdb
+	${GDB} -x debug.gdb
 
 clean:
 	rm -rf *.bin *.img *.o *.elf

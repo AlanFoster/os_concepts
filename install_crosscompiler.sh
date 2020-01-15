@@ -3,11 +3,12 @@
 set -euxo pipefail
 
 export PREFIX="$HOME/opt/cross"
-export TARGET=i686-elf
+export TARGET=i386F-elf
 export PATH="$PREFIX/bin:$PATH"
 
 export BINUTILS=binutils-2.33.1
 export GCC=gcc-7.4.0
+export GDB=gdb-8.2.1
 
 compile_binutils() {
     mkdir -p /tmp/src
@@ -50,6 +51,26 @@ compile_gcc() {
     make install-target-libgcc
 }
 
+
+compile_gdb() {
+    mkdir -p /tmp/src
+    cd /tmp/src
+
+    GDB_TAR=${GDB}.tar.gz
+
+    if ! [ -e "${GDB_TAR}" ]; then
+        curl -O https://ftp.gnu.org/gnu/gdb/${GDB_TAR}
+    fi
+    tar xf ${GDB_TAR}
+
+    mkdir -p gdb-build
+    cd gdb-build
+    ../${GDB}/configure --target=$TARGET --prefix="$PREFIX" --disable-nls --enable-languages=c,c++ --without-headers
+
+    make
+    make install
+}
+
 if [ $# -eq 0 ]; then
     echo "missing target"
     exit 1
@@ -64,7 +85,10 @@ case $target in
     gcc)
         compile_gcc
     ;;
+    gdb)
+        compile_gdb
+    ;;
     *)
-        echo "unknown target, target must be binutils or gcc"
+        echo "unknown target, target must be binutils or gdb"
     ;;
 esac

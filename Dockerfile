@@ -9,7 +9,8 @@ RUN apt install -y \
     libgmp3-dev \
     libmpc-dev \
     libmpfr-dev \
-    nasm
+    nasm \
+    texinfo
 run ./install_crosscompiler.sh binutils
 run ./install_crosscompiler.sh gcc
 
