@@ -6,7 +6,7 @@ C_SOURCES = $(wildcard kernel/*.c drivers/*.c)
 HEADERS = $(wildcard kernel/*.h drivers/*.h)
 OBJ = ${C_SOURCES:.c=.o}
 # Debugging symbols enabled
-CFLAGS = -g
+CFLAGS = -g -Wall -Wextra
 
 CC = ~/opt/cross/bin/i686-elf-gcc
 LD = ~/opt/cross/bin/i686-elf-ld
