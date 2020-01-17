@@ -45,3 +45,8 @@ void itoa(int num, char str_buffer[]) {
     reverse(str_buffer);
 }
 
+void memory_set(char *dest, char val, int amount) {
+    for (int i = 0; i < amount; i++) {
+        dest[i] = val;
+    }
+}

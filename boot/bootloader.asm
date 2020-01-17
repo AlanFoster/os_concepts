@@ -78,7 +78,7 @@ gdt_null_descriptor:
 gdt_code_descriptor:
   ; base=0x0, limit=0xfffff
   ; 1st flags: (present, always 1) 1 (privilege level) 00 (descrptor type, 1 for code or data) 1
-  ; type flags: (executable) 1 (conforming) 1 (readable) 1 (accesssesd) 0
+  ; type flags: (executable) 1 (conforming) 1 (readable) 1 (accessed) 0
   ; 2nd flags: (granularity, 0=1byte,1=4kbyte) 1 (operand size, 0=16bit, 1=32bit) (always 0) 0 (AVL - Available for system use) 0
   dw 0xffff      ; Segment limit, bits 0-15
   dw 0           ; Segment base, bits 0-15
@@ -89,7 +89,7 @@ gdt_code_descriptor:
 
 gdt_data_descriptor:
   ; Same as code section, but:
-  ; type flags: (executable) 0 (expand down) 0 (writable) 1 (accesssesd) 0
+  ; type flags: (executable) 0 (expand down) 0 (writable) 1 (accessed) 0
   dw 0xffff      ; Segment limit, bits 0-15
   dw 0           ; Segment base, bits 0-15
   db 0           ; Segment base, bits 16-23

@@ -61,3 +61,4 @@ make debug
 - [Writing a simple bootloader](https://www.alanfoster.me/posts/writing-a-bootloader/)
 - [Writing a simple operating system - from scratch](https://www.cs.bham.ac.uk/~exr/lectures/opsys/10_11/lectures/os-dev.pdf)
 - [os-tutorial](https://github.com/cfenollosa/os-tutorial)
+- [Intel® 64 and IA-32 Architectures Software Developer’s Manual](https://www.intel.co.uk/content/www/uk/en/architecture-and-technology/64-ia-32-architectures-software-developer-system-programming-manual-325384.html)

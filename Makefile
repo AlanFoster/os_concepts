@@ -2,9 +2,9 @@
 # $< = first dependency
 # $^ = all dependencies
 
-C_SOURCES = $(wildcard kernel/*.c drivers/*.c)
-HEADERS = $(wildcard kernel/*.h drivers/*.h)
-OBJ = ${C_SOURCES:.c=.o}
+C_SOURCES = $(wildcard kernel/*.c drivers/*.c cpu/*.c)
+HEADERS = $(wildcard kernel/*.h drivers/*.h cpu/*.h)
+OBJ = ${C_SOURCES:.c=.o cpu/interrupts.o}
 # Debugging symbols enabled
 CFLAGS = -g -Wall -Wextra
 
@@ -31,7 +31,7 @@ disk.img: os.img
 	${CC} ${CFLAGS} -ffreestanding -c $< -o $@
 
 %.o: %.asm
-	nasm -f elf $< -o $@
+	nasm -g -f elf $< -o $@
 
 %.bin: %.asm
 	nasm -f bin $< -O0 -o $@
