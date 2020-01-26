@@ -20,8 +20,8 @@ typedef struct {
     /**
      * Error code if available. This may be a dummy value.
      */
-    uint32_t interrupt_code;
-    // Additional values pushed by the processor
+    uint32_t error_code;
+    // Additional values pushed by the processor automatically during an exception frame
     uint32_t eip;   // Return address
     uint32_t cs;    // code segment selector
     uint32_t eflags;
@@ -30,7 +30,6 @@ typedef struct {
 } ISR_event;
 
 void isr_install();
-// void isr_handler(ISR_event e);
-void isr_handler();
+void isr_handler(ISR_event e);
 
 #endif

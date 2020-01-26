@@ -21,4 +21,4 @@ void clear_screen();
 void set_terminal_foreground(enum screen_color color);
 void set_terminal_background(enum screen_color color);
 void print_char(char c);
-void print_string(char *s);
+void print_string(char *format, ...);

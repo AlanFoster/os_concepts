@@ -2,6 +2,7 @@
 #include "screen.h"
 #include "ports.h"
 #include "../kernel/util.h"
+#include <stdarg.h>.
 
 #define VIDEO_ADDRESS 0xb8000
 #define MAX_ROWS 25
@@ -98,8 +99,22 @@ void print_char(char c) {
     set_cursor_offset(offset);
 }
 
-void print_string(char *s) {
-    for (int i = 0; s[i] != 0; i++) {
-        print_char(s[i]);
+void print_string(char *format, ...) {
+    va_list args;
+    va_start(args, format);
+
+    char str_buffer[32];
+
+    for (int i = 0; format[i] != '\0'; i++) {
+        if (format[i] == '%' && format[i + 1] == 'd') {
+            i++; // Skip the percentage character
+            int number = va_arg(args, int);
+            itoa(number, str_buffer);
+            print_string(str_buffer);
+        } else {
+            print_char(format[i]);
+        }
     }
+
+    va_end(args);
 }

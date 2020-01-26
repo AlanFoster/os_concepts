@@ -1,32 +1,53 @@
 ; Full details on interrupt service routines:
 ; http://www.osdever.net/bkerndev/Docs/isrs.htm
+; https://wiki.osdev.org/Exceptions
+;
+; Interrupt stack frame
+; https://os.phil-opp.com/cpu-exceptions/#the-interrupt-stack-frame
 ;
 ; Note that some interrupts do not contain error codes, and some do.
 ; This file produces a fake error code when none is present, in order to
 ; have a consistent stack.
 
-[extern handle_isr]
+extern handle_isr
 ALIGN 4
+
 
 ; Whether the handler has a dummy error code or not, this is the shared logic required
 shared_handler_logic:
-    pushad
+    ; 1 - Pushing the state on to the stack in preparation for calling the handler
+	pusha ; Pushes edi,esi,ebp,esp,ebx,edx,ecx,eax
+	mov ax, ds ; Lower 16-bits of eax = ds.
+	push eax ; save the data segment descriptor
+	mov ax, 0x10  ; Load the kernel data segment descriptor
+	mov ds, ax
+	mov es, ax
+	mov fs, ax
+	mov gs, ax
+
+	; push esp ; TODO: registers_t *r
     cld ; sysV ABI require clear DF
 
-    ; Invoking the fault handler, written in C
+    ; 2. Invoking the fault handler, written in C
     call handle_isr
 
-    ; Cleanup + Returning
-    ; add esp, 8      ; Clean up the stack, of error code and interrupt number
-    popad
-    iret ; TODO: Why are you iret
+    ; 3. Cleanup + Returning
+	pop eax
+	mov ds, ax
+	mov es, ax
+	mov fs, ax
+	mov gs, ax
+	popa
+	add esp, 8 ; Remove error code + interrupt number from the isr assembly handlers
+	sti
+    iret ; Interrupt return
 
 ; Macro syntax: name, followed by number of arguments. Access arguments via %1, %2, ..., %n
 %macro real_error 3
 [global isr%1]
 isr%1:
     cli
-    ; push byte %1    ; Push the current interupt handler, note that no dummy code was pushed
+    push 0xff    ; Push the current interupt handler, note that no dummy code was pushed
     jmp shared_handler_logic
 %endmacro
 
@@ -34,8 +55,8 @@ isr%1:
 [global isr%1]
 isr%1:
     cli
-    ; push byte 0    ; Push dummy error code
-    ; push byte %1   ; Push the current interupt number
+    push byte 34   ; Push dummy error code
+    push byte 31   ; Push the current interupt number
     jmp shared_handler_logic
 %endmacro
 
@@ -58,7 +79,7 @@ real_error 13, "General Protection Fault Exception", "Yes error code"
 real_error 14, "Page Fault Exception", "Yes error code"
 mock_error 15, "Unknown Interrupt Exception", "No error code"
 mock_error 16, "Coprocessor Fault Exception", "No error code"
-mock_error 17, "Alignment Check Exception  486+ ", "No error code"
+real_error 17, "Alignment Check Exception  486+ ", "Yes error code"
 mock_error 18, "Machine Check Exception  Pentium/586+ ", "No error code"
 mock_error 19, "19-31 Reserved Exceptions", "No error code"
 mock_error 20, "19-31 Reserved Exceptions", "No error code"
@@ -71,5 +92,5 @@ mock_error 26, "19-31 Reserved Exceptions", "No error code"
 mock_error 27, "19-31 Reserved Exceptions", "No error code"
 mock_error 28, "19-31 Reserved Exceptions", "No error code"
 mock_error 29, "19-31 Reserved Exceptions", "No error code"
-mock_error 30, "19-31 Reserved Exceptions", "No error code"
+real_error 30, "Security Exception", "Yes error code"
 mock_error 31, "19-31 Reserved Exceptions", "No error code"
