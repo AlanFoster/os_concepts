@@ -4,6 +4,6 @@ set disassembly-flavor intel
 dashboard -layout asm, reg
 symbol-file kernel.elf
 
-b isr.c:8
-b isr.c:23
+b *0x7c00
+b kernel.c:main
 continue

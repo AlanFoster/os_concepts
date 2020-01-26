@@ -55,6 +55,7 @@ make debug
 
 - The stack grows downwards in terms of memory
 - The easiest way to see specific calling conventions between the `caller` and `callee` is with [godbolt](https://godbolt.org/), in conjunction with reading [Calling convention](https://en.wikipedia.org/wiki/Calling_convention)
+- Useful commands: dumping stack `x/100w $esp+4`,`info registers`, `info frame`
 
 ## Resources
 
@@ -62,3 +63,4 @@ make debug
 - [Writing a simple operating system - from scratch](https://www.cs.bham.ac.uk/~exr/lectures/opsys/10_11/lectures/os-dev.pdf)
 - [os-tutorial](https://github.com/cfenollosa/os-tutorial)
 - [Intel® 64 and IA-32 Architectures Software Developer’s Manual](https://www.intel.co.uk/content/www/uk/en/architecture-and-technology/64-ia-32-architectures-software-developer-system-programming-manual-325384.html)
+- [print memory address and value of c arguments](https://stackoverflow.com/questions/31972345/how-to-print-the-memory-address-and-the-value-of-the-arguments-of-a-c-c-functi)

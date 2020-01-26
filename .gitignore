@@ -5,3 +5,4 @@
 *.elf
 .gdb_history
 .vscode
+core

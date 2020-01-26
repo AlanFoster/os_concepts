@@ -5,8 +5,9 @@
 extern void isr0();
 
 void handle_isr(ISR_event e) {
-    print_string("error code was %d\n", e.error_code);
-    print_string("interrupt code was %d\n", e.interrupt_code);
+    print_string("isr triggered.\n", e.error_code);
+    print_string("error code was: %d\n", e.error_code);
+    print_string("interrupt code was: %d\n", e.interrupt_code);
 
     for (;;);
 }
@@ -20,7 +21,8 @@ void install_isr() {
 
     load_idt();
 
-    int x = 0 / 0;
+    int y = 5 - 2;
+    y = 0 / 0;
     // asm volatile ("int $0x7");
 }
 

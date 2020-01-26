@@ -16,7 +16,6 @@ ALIGN 4
 ; Whether the handler has a dummy error code or not, this is the shared logic required
 shared_handler_logic:
     ; 1 - Pushing the state on to the stack in preparation for calling the handler
-	pusha ; Pushes edi,esi,ebp,esp,ebx,edx,ecx,eax
 	mov ax, ds ; Lower 16-bits of eax = ds.
 	push eax ; save the data segment descriptor
 	mov ax, 0x10  ; Load the kernel data segment descriptor
@@ -37,7 +36,6 @@ shared_handler_logic:
 	mov es, ax
 	mov fs, ax
 	mov gs, ax
-	popa
 	add esp, 8 ; Remove error code + interrupt number from the isr assembly handlers
 	sti
     iret ; Interrupt return
@@ -55,8 +53,9 @@ isr%1:
 [global isr%1]
 isr%1:
     cli
-    push byte 34   ; Push dummy error code
-    push byte 31   ; Push the current interupt number
+    push byte 123    ; Push dummy error code
+    push byte %1     ; Push the current interupt number
+
     jmp shared_handler_logic
 %endmacro
 
