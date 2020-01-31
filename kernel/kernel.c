@@ -1,10 +1,12 @@
 #include "../drivers/screen.h"
 #include "../cpu/idt.h"
+#include "../cpu/isr.h"
 #include "./util.h"
 
 void main() {
     clear_screen();
-    install_isr();
+    load_idt();
+    isr_install();
 
     char str_buffer[20];
 
@@ -17,6 +19,5 @@ void main() {
         print_char('\n');
     }
 
-    // asm volatile ("int $0x3");
-    // asm volatile ("int $0x3");
+    asm volatile ("int $0x9");
 }
