@@ -92,13 +92,11 @@ void handle_irq(ISR_event e) {
 }
 
 void isr_install(void) {
-    print_string("Installing ISR handlers\n");
-
     memory_set(interrupt_handlers, 0, TOTAL_HANDLERS);
     register_error_handling();
     register_pic_irqs();
 
-    // Set interrupt flag, enabling interrupts
+    // Remember to set the interrupt flag, enabling interrupts
     asm volatile("sti");
 }
 
@@ -158,8 +156,6 @@ void remap_pic_irq(void) {
     port_byte_out(SLAVE_DATA, 0x01);
     port_byte_out(MASTER_DATA, 0x0);
     port_byte_out(SLAVE_DATA, 0x0);
-
-    print_string("\nmapped?\n");
 }
 
 void register_pic_irqs(void) {
@@ -182,9 +178,6 @@ void register_pic_irqs(void) {
     set_idt_gate(45, (uint32_t) irq13);
     set_idt_gate(46, (uint32_t) irq14);
     set_idt_gate(47, (uint32_t) irq15);
-
-    print_string("\nFinished setting irq\n");
-    // asm volatile ("int $40");
 }
 
 void register_interrupt_handler(uint8_t interrupt_code, IRQ_Handler handler) {

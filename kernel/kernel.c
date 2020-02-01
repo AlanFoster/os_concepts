@@ -3,15 +3,16 @@
 #include "../cpu/idt.h"
 #include "../cpu/isr.h"
 #include "./util.h"
+#include "../drivers/keyboard.h"
 
 #define SYSTEM_CLOCK_HZ 100
-
 
 void main() {
     clear_screen();
     load_idt();
     isr_install();
     init_timer(SYSTEM_CLOCK_HZ);
+    init_keyboard();
 
     char str_buffer[20];
 
