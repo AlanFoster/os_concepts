@@ -11,8 +11,6 @@ void main() {
     clear_screen();
     load_idt();
     isr_install();
-
-    asm volatile("sti");
     init_timer(SYSTEM_CLOCK_HZ);
 
     char str_buffer[20];

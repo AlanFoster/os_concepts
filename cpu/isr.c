@@ -8,6 +8,9 @@
 #define MASTER_DATA (MASTER_COMMAND + 1)
 #define SLAVE_COMMAND 0xA0
 #define SLAVE_DATA (SLAVE_COMMAND + 1)
+#define TOTAL_HANDLERS 256
+
+IRQ_Handler interrupt_handlers[TOTAL_HANDLERS];
 
 // Error isrs
 extern void isr0();
@@ -74,10 +77,6 @@ void handle_isr(ISR_event e) {
 }
 
 void handle_irq(ISR_event e) {
-    for (;;) {
-        print_string("irq triggered %d\n", e.interrupt_code);
-    }
-
     // Send an EOI (End of interrupt) signal to master and slave
     // PICs as required.
     if (e.interrupt_code >= 40) {
@@ -85,14 +84,22 @@ void handle_irq(ISR_event e) {
     }
     port_byte_out(MASTER_COMMAND, 0x20);
 
-    print_string("irq handled %d\n", e.interrupt_code);
+    // If a handler is present, trigger it
+    IRQ_Handler handler = interrupt_handlers[e.interrupt_code];
+    if (handler != 0) {
+        interrupt_handlers[e.interrupt_code](e);
+    }
 }
 
 void isr_install(void) {
     print_string("Installing ISR handlers\n");
 
+    memory_set(interrupt_handlers, 0, TOTAL_HANDLERS);
     register_error_handling();
     register_pic_irqs();
+
+    // Set interrupt flag, enabling interrupts
+    asm volatile("sti");
 }
 
 void register_error_handling(void) {
@@ -178,4 +185,8 @@ void register_pic_irqs(void) {
 
     print_string("\nFinished setting irq\n");
     // asm volatile ("int $40");
+}
+
+void register_interrupt_handler(uint8_t interrupt_code, IRQ_Handler handler) {
+    interrupt_handlers[interrupt_code] = handler;
 }
