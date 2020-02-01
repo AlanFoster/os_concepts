@@ -2,7 +2,7 @@
 #include "screen.h"
 #include "ports.h"
 #include "../kernel/util.h"
-#include <stdarg.h>.
+#include <stdarg.h>
 
 #define VIDEO_ADDRESS 0xb8000
 #define MAX_ROWS 25

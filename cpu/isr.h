@@ -10,7 +10,8 @@ typedef struct {
     uint32_t datasegment;
 
     /**
-     * The interrupt code, i.e. 0 for division by zero exception
+     * The interrupt code, i.e. 0 for division by zero exception when a
+     * cpu interrupt has been raised, or 32-47 for PIC interrupts.
      */
     uint32_t interrupt_code;
 

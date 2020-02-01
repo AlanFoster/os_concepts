@@ -1,12 +1,19 @@
 #include "../drivers/screen.h"
+#include "../cpu/timer.h"
 #include "../cpu/idt.h"
 #include "../cpu/isr.h"
 #include "./util.h"
+
+#define SYSTEM_CLOCK_HZ 100
+
 
 void main() {
     clear_screen();
     load_idt();
     isr_install();
+
+    asm volatile("sti");
+    init_timer(SYSTEM_CLOCK_HZ);
 
     char str_buffer[20];
 
@@ -18,6 +25,4 @@ void main() {
         print_char(',');
         print_char('\n');
     }
-
-    asm volatile ("int $0x9");
 }

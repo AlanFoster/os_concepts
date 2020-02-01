@@ -1,8 +1,15 @@
 #include "../drivers/screen.h"
 #include "./isr.h"
 #include "./idt.h"
+#include "../drivers/ports.h"
 #include <stdint.h>
 
+#define MASTER_COMMAND 0x20
+#define MASTER_DATA (MASTER_COMMAND + 1)
+#define SLAVE_COMMAND 0xA0
+#define SLAVE_DATA (SLAVE_COMMAND + 1)
+
+// Error isrs
 extern void isr0();
 extern void isr1();
 extern void isr2();
@@ -36,17 +43,59 @@ extern void isr29();
 extern void isr30();
 extern void isr31();
 
+// PIC interrupts
+extern void irq0();
+extern void irq1();
+extern void irq2();
+extern void irq3();
+extern void irq4();
+extern void irq5();
+extern void irq6();
+extern void irq7();
+extern void irq8();
+extern void irq9();
+extern void irq10();
+extern void irq11();
+extern void irq12();
+extern void irq13();
+extern void irq14();
+extern void irq15();
+
+void register_error_handling(void);
+void remap_pic_irq(void);
+void register_pic_irqs(void);
+
 void handle_isr(ISR_event e) {
-    print_string("isr triggered.\n", e.error_code);
+    print_string("isr triggered:\n");
     print_string("error code was: %d\n", e.error_code);
     print_string("interrupt code was: %d\n", e.interrupt_code);
 
     for (;;);
 }
 
-void isr_install() {
+void handle_irq(ISR_event e) {
+    for (;;) {
+        print_string("irq triggered %d\n", e.interrupt_code);
+    }
+
+    // Send an EOI (End of interrupt) signal to master and slave
+    // PICs as required.
+    if (e.interrupt_code >= 40) {
+        port_byte_out(SLAVE_COMMAND, 0x20);
+    }
+    port_byte_out(MASTER_COMMAND, 0x20);
+
+    print_string("irq handled %d\n", e.interrupt_code);
+}
+
+void isr_install(void) {
     print_string("Installing ISR handlers\n");
 
+    register_error_handling();
+    register_pic_irqs();
+}
+
+void register_error_handling(void) {
     set_idt_gate(0, (uint32_t) isr0);
     set_idt_gate(1, (uint32_t) isr1);
     set_idt_gate(2, (uint32_t) isr2);
@@ -79,7 +128,54 @@ void isr_install() {
     set_idt_gate(29, (uint32_t) isr29);
     set_idt_gate(30, (uint32_t) isr30);
     set_idt_gate(31, (uint32_t) isr31);
-
-    load_idt();
 }
 
+void remap_pic_irq(void) {
+    // By default:
+    // Master IRQs 0-7  are mapped to INT 0x8-0xF
+    // Slave IRQs 8-15 are mapped to int 0x70-0x77
+    // These IRQs conflict with the error handling ISRs, so let's map
+    // them to 'free' ISR slots that aren't assocciated with error
+    // handling. Remapping PICs is done via ports.
+
+    // Initialize master + slave PIC
+    port_byte_out(MASTER_COMMAND, 0x11);
+    port_byte_out(SLAVE_DATA, 0x11);
+
+    // Remap IRQs to higher, 'free' slots
+    port_byte_out(MASTER_DATA, 0x20);
+    port_byte_out(SLAVE_DATA, 0x28);
+    port_byte_out(MASTER_DATA, 0x04);
+    port_byte_out(SLAVE_DATA, 0x02);
+    port_byte_out(MASTER_DATA, 0x01);
+    port_byte_out(SLAVE_DATA, 0x01);
+    port_byte_out(MASTER_DATA, 0x0);
+    port_byte_out(SLAVE_DATA, 0x0);
+
+    print_string("\nmapped?\n");
+}
+
+void register_pic_irqs(void) {
+    remap_pic_irq();
+
+    // Register handler
+    set_idt_gate(32, (uint32_t) irq0);
+    set_idt_gate(33, (uint32_t) irq1);
+    set_idt_gate(34, (uint32_t) irq2);
+    set_idt_gate(35, (uint32_t) irq3);
+    set_idt_gate(36, (uint32_t) irq4);
+    set_idt_gate(37, (uint32_t) irq5);
+    set_idt_gate(38, (uint32_t) irq6);
+    set_idt_gate(39, (uint32_t) irq7);
+    set_idt_gate(40, (uint32_t) irq8);
+    set_idt_gate(41, (uint32_t) irq9);
+    set_idt_gate(42, (uint32_t) irq10);
+    set_idt_gate(43, (uint32_t) irq11);
+    set_idt_gate(44, (uint32_t) irq12);
+    set_idt_gate(45, (uint32_t) irq13);
+    set_idt_gate(46, (uint32_t) irq14);
+    set_idt_gate(47, (uint32_t) irq15);
+
+    print_string("\nFinished setting irq\n");
+    // asm volatile ("int $40");
+}
