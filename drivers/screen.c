@@ -111,6 +111,11 @@ void print_string(char *format, ...) {
             int number = va_arg(args, int);
             itoa(number, str_buffer);
             print_string(str_buffer);
+        } else if (format[i] == '%' && format[i + 1] == 'x') {
+            i++; // Skip the percentage character
+            int number = va_arg(args, int);
+            itohex(number, str_buffer);
+            print_string(str_buffer);
         } else {
             print_char(format[i]);
         }

@@ -14,14 +14,9 @@ void main() {
     init_timer(SYSTEM_CLOCK_HZ);
     init_keyboard();
 
-    char str_buffer[20];
-
     print_string("hello world\n");
 
-    for (int i = 0 ; i <= 10; i ++) {
-        itoa(i, str_buffer);
-        print_string(str_buffer);
-        print_char(',');
-        print_char('\n');
+    for (int i = 0 ; i <= 32; i++) {
+        print_string("int: %d - hex: %x\n", i, i);
     }
 }
