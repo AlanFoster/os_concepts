@@ -5,70 +5,82 @@
 
 #define KEYBOARD_STATUS_PORT 0x64
 #define KEYBOARD_DATA_PORT 0x60
+#define LEFT_SHIFT_DOWN 0x2a
+#define LEFT_SHIFT_UP 0xaa
+#define RIGHT_SHIFT_UP 0x36
+#define RIGHT_SHIFT_DOWN 0xb6
+#define CAPS_LOCK 0x3a
 
-// https://www.win.tue.nl/~aeb/linux/kbd/scancodes-1.html
-const char *scancode_name[] = {
-    "ERROR",
-    "Escape",
-    "1",
-    "2",
-    "3",
-    "4",
-    "5",
-    "6",
-    "7",
-    "8",
-    "9",
-    "0",
-    "-",
-    "=",
-    "Backspace",
-    "Tab",
-    "Q",
-    "W",
-    "E",
-    "R",
-    "T",
-    "Y",
-    "U",
-    "I",
-    "O",
-    "P",
-    "[",
-    "]",
-    "Enter",
-    "LeftControl",
-    "A",
-    "S",
-    "D",
-    "F",
-    "G",
-    "H",
-    "J",
-    "K",
-    "L",
-    ";",
-    "'",
-    "`",
-    "LeftShift",
-    "\\",
-    "Z",
-    "X",
-    "C",
-    "V",
-    "B",
-    "N",
-    "M",
-    ",",
-    ".",
-    "/",
-    "RightShift",
-    "Keypad *",
-    "LeftAlt",
-    "SpaceBar"
+enum KeyboardState {
+    None = 0,
+    ShiftDown = 1 << 0,
+    CapsDown = 1 << 1
 };
 
-const char scancode_ascii[] = {
+enum KeyboardState state = None;
+
+const char upper_scancode_ascii[] = {
+    '?',
+    '?',
+    '!',
+    '@',
+    '£',
+    '$',
+    '%',
+    '^',
+    '&',
+    '*',
+    '(',
+    ')',
+    '_',
+    '+',
+    '?',
+    '?',
+    'Q',
+    'W',
+    'E',
+    'R',
+    'T',
+    'Y',
+    'U',
+    'I',
+    'O',
+    'P',
+    '{',
+    '}',
+    '?',
+    '?',
+    'A',
+    'S',
+    'D',
+    'F',
+    'G',
+    'H',
+    'J',
+    'K',
+    'L',
+    ':',
+    '\'',
+    '`',
+    '?',
+    '|',
+    'Z',
+    'X',
+    'C',
+    'V',
+    'B',
+    'N',
+    'M',
+    '<',
+    '>',
+    '?',
+    '?',
+    '?',
+    '?',
+    ' '
+};
+
+const char lower_scancode_ascii[] = {
     '?',
     '?',
     '1',
@@ -85,41 +97,41 @@ const char scancode_ascii[] = {
     '=',
     '?',
     '?',
-    'Q',
-    'W',
-    'E',
-    'R',
-    'T',
-    'Y',
-    'U',
-    'I',
-    'O',
-    'P',
+    'q',
+    'w',
+    'e',
+    'r',
+    't',
+    'y',
+    'u',
+    'i',
+    'o',
+    'p',
     '[',
     ']',
     '?',
     '?',
-    'A',
-    'S',
-    'D',
-    'F',
-    'G',
-    'H',
-    'J',
-    'K',
-    'L',
+    'a',
+    's',
+    'd',
+    'f',
+    'g',
+    'h',
+    'j',
+    'k',
+    'l',
     ';',
     '\'',
     '`',
     '?',
     '\\',
-    'Z',
-    'X',
-    'C',
-    'V',
-    'B',
-    'N',
-    'M',
+    'z',
+    'x',
+    'c',
+    'v',
+    'b',
+    'n',
+    'm',
     ',',
     '.',
     '/',
@@ -146,11 +158,39 @@ static void keyboard_callback(__attribute__((unused)) ISR_event e) {
     }
 
     scancode = port_byte_in(KEYBOARD_DATA_PORT);
+
+    if (scancode == CAPS_LOCK) {
+        state ^= CapsDown;
+        return;
+    }
+
+    if (scancode == LEFT_SHIFT_DOWN ||
+        scancode == LEFT_SHIFT_UP ||
+        scancode == RIGHT_SHIFT_DOWN ||
+        scancode == RIGHT_SHIFT_UP) {
+        if (is_key_release(scancode)) {
+            state &= ~ShiftDown;
+        } else {
+            state |= ShiftDown;
+        }
+        return;
+    }
+
     if (is_key_release(scancode)) {
         return;
     }
 
-    print_char(scancode_ascii[scancode]);
+    // TODO: There still needs to be more granularity here.
+    // If caps is down, and shift is down, its lower case letters.
+    // But it's only upper "case" symbols when shift is down.
+    if (
+        state == None ||
+        ((state & (CapsDown | ShiftDown)) == (CapsDown | ShiftDown))
+    ) {
+        print_char(lower_scancode_ascii[scancode]);
+    } else {
+        print_char(upper_scancode_ascii[scancode]);
+    }
 }
 
 void init_keyboard() {
