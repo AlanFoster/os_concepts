@@ -1,6 +1,8 @@
 # OS Concepts
 
-Simple hello world OS concepts, starting with a simple bootloader
+A simple hello world "OS" - created purely for the purpose of learning more about OS concepts. Functionality includes a simple bootloader which switches to 32 bit protected mode, and a kernel which provides basic VGA graphics and PS/2 keyboard support.
+
+![Running os with simple input/output](example.gif)
 
 ## Running
 
