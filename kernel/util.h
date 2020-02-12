@@ -4,3 +4,4 @@ void itoa(int n, char target[]);
 void itohex(int n, char target[]);
 void reverse(char str[]);
 void strlen(char str[]);
+int strcmp(char *str1, char *str2);

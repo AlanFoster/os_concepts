@@ -2,6 +2,7 @@
 #include "../cpu/isr.h"
 #include "../drivers/ports.h"
 #include "../drivers/screen.h"
+#include "../kernel/kernel.h"
 
 #define KEYBOARD_STATUS_PORT 0x64
 #define KEYBOARD_DATA_PORT 0x60
@@ -10,12 +11,18 @@
 #define RIGHT_SHIFT_UP 0x36
 #define RIGHT_SHIFT_DOWN 0xb6
 #define CAPS_LOCK 0x3a
+#define BACKSPACE 0x0e
+#define ENTER 0x1c
+#define INPUT_BUFFER_SIZE 256
 
 enum KeyboardState {
     None = 0,
     ShiftDown = 1 << 0,
     CapsDown = 1 << 1
 };
+
+static char input_buffer[INPUT_BUFFER_SIZE];
+static int8_t pointer;
 
 enum KeyboardState state = None;
 
@@ -180,6 +187,27 @@ static void keyboard_callback(__attribute__((unused)) ISR_event e) {
         return;
     }
 
+    if (
+        scancode == BACKSPACE
+    ) {
+        if (input_buffer[0] != '\0') {
+            back_char();
+            input_buffer[--pointer] = '\0';
+        }
+
+        return;
+    }
+
+    if (
+        scancode == ENTER
+    ) {
+        print_char('\n');
+        on_user_input(input_buffer);
+        memory_set(input_buffer, 0, INPUT_BUFFER_SIZE);
+        pointer = 0;
+        return;
+    }
+
     // TODO: There still needs to be more granularity here.
     // If caps is down, and shift is down, its lower case letters.
     // But it's only upper "case" symbols when shift is down.
@@ -188,11 +216,15 @@ static void keyboard_callback(__attribute__((unused)) ISR_event e) {
         ((state & (CapsDown | ShiftDown)) == (CapsDown | ShiftDown))
     ) {
         print_char(lower_scancode_ascii[scancode]);
+        input_buffer[pointer++] = lower_scancode_ascii[scancode];
     } else {
         print_char(upper_scancode_ascii[scancode]);
+        input_buffer[pointer++] = upper_scancode_ascii[scancode];
     }
 }
 
 void init_keyboard() {
     register_interrupt_handler(IRQ1, keyboard_callback);
+    input_buffer[0] = '\0';
+    pointer = 0;
 }

@@ -70,3 +70,14 @@ void memory_set(char *dest, char val, int amount) {
         dest[i] = val;
     }
 }
+
+int strcmp(char *str1, char *str2) {
+    int i = 0;
+    for ( i = 0 ; str1[i] == str2[i]; i++) {
+        if (str1[i] == '\0') {
+            return 0;
+        }
+    }
+
+    return str1[i] - str2[i];
+}

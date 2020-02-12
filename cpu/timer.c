@@ -13,6 +13,10 @@ static void timer_callback(__attribute__((unused)) ISR_event e) {
     tick++;
 }
 
+uint32_t get_tick() {
+    return tick;
+}
+
 void init_timer(uint32_t frequency) {
     uint16_t divisor = 1193180 / frequency;
 

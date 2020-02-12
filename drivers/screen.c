@@ -76,6 +76,16 @@ void print_char_at(char c, int row, int col) {
     terminal_buffer[offset + 1] = color;
 }
 
+void back_char() {
+    if (terminal_column <= 0) {
+        return;
+    }
+
+    terminal_column--;
+    print_char(' ');
+    terminal_column--;
+}
+
 void print_char(char c) {
     if (c == '\n') {
         terminal_column = 0;
