@@ -7,23 +7,33 @@
 #include "../drivers/ports.h"
 
 #define SYSTEM_CLOCK_HZ 100
+#define RED "\e[31m"
+#define GREEN "\e[32m"
+#define YELLOW "\e[33m"
+#define CYAN "\e[36m"
+#define RESET "\e[0m"
 
 void print_help() {
-    print_string("  ticks - print the total cpu ticks since boot\n");
-    print_string("  halt - halt the machine\n");
-    print_string("  help - print the available instructions\n");
+    print_string("  " GREEN "ticks" RESET " - print the total cpu ticks since boot\n");
+    print_string("  " GREEN "count" RESET " - count in hex\n");
+    print_string("  " GREEN "halt" RESET " - halt the machine\n");
+    print_string("  " GREEN "help" RESET " - print the available instructions\n");
 }
 
 void on_user_input(char *user_input) {
     if (strcmp(user_input, "ticks") == 0) {
-        print_string("the total cpu ticks since boot is: %d\n", get_tick());
+        print_string("the total cpu ticks since boot is: " YELLOW "%d" RESET "\n", get_tick());
     } else if (strcmp(user_input, "halt") == 0) {
         print_string("halting...\n");
         asm volatile("hlt");
     } else if (strcmp(user_input, "help") == 0) {
         print_help();
+    } else if (strcmp(user_input, "count") == 0) {
+        for (int i = 0 ; i <= 32; i++) {
+            print_string("int: %d - hex: " YELLOW "%x" RESET "\n", i, i);
+        }
     } else {
-        print_string("unknown command\n");
+        print_string(RED "unknown command\n" RESET);
         print_help();
     }
     print_string("> ");
@@ -36,11 +46,7 @@ void main() {
     init_timer(SYSTEM_CLOCK_HZ);
     init_keyboard();
 
-    print_string("hello world!\n");
-
-    for (int i = 0 ; i <= 8; i++) {
-        print_string("int: %d - hex: %x\n", i, i);
-    }
+    print_string("type " CYAN "help" RESET " to see the available commands\n");
 
     print_string("> ");
 }

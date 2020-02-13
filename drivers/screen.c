@@ -19,6 +19,17 @@ unsigned char* terminal_buffer;
 enum screen_color terminal_foreground_color;
 enum screen_color terminal_background_color;
 
+const enum screen_color ansi_code_to_screen_color_lookoup[] = {
+    SCREEN_COLOR_BLACK,
+    SCREEN_COLOR_RED,
+    SCREEN_COLOR_GREEN,
+    SCREEN_COLOR_LIGHT_BROWN,
+    SCREEN_COLOR_BLUE,
+    SCREEN_COLOR_MAGENTA,
+    SCREEN_COLOR_CYAN,
+    SCREEN_COLOR_WHITE,
+};
+
 int get_terminal_offset(int row, int column) {
     return 2 * (row * MAX_COLS + column);
 }
@@ -126,6 +137,29 @@ void print_string(char *format, ...) {
             int number = va_arg(args, int);
             itohex(number, str_buffer);
             print_string(str_buffer);
+        } else if (format[i] == '\e') {
+            i++; // Skip the escape character
+
+            // Note, currently only handles setting graphics mode
+            if (format[i] == '[') {
+                i++;
+            }
+
+            int ansi_code = atoi(&format[i]);
+
+            if (ansi_code == 0) {
+                set_terminal_background(SCREEN_COLOR_BLACK);
+                set_terminal_foreground(SCREEN_COLOR_WHITE);
+            } else if (ansi_code >= 30 && ansi_code <= 37) {
+                set_terminal_foreground(ansi_code_to_screen_color_lookoup[ansi_code - 30]);
+            } else if (ansi_code >= 40 && ansi_code <= 47) {
+                set_terminal_background(ansi_code_to_screen_color_lookoup[ansi_code - 40]);
+            }
+
+            // Skip everything until m, or end of string
+            while (format[i] != 'm' && format[i] != '\0') {
+                i++;
+            }
         } else {
             print_char(format[i]);
         }
