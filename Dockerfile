@@ -1,18 +1,18 @@
 FROM ubuntu:18.04
 
-COPY ./install_crosscompiler.sh ./
-
-RUN apt update
-RUN apt install -y \
+RUN apt update && apt install -y \
     build-essential \
     curl \
     libgmp3-dev \
     libmpc-dev \
     libmpfr-dev \
     nasm \
-    texinfo
-run ./install_crosscompiler.sh binutils
-run ./install_crosscompiler.sh gcc
+    texinfo \
+    qemu-system-i386
 
-# Add the cross compiler to the path, to ensure 'i686-elf-gcc' is now available
+COPY ./install_crosscompiler.sh ./
+RUN ./install_crosscompiler.sh binutils
+RUN ./install_crosscompiler.sh gcc
+
+# Add the cross compiler to the path, to ensure 'i386-elf-gcc' is now available
 ENV PATH="~/opt/cross/bin:${PATH}"

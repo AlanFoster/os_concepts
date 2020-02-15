@@ -3,7 +3,7 @@
 set -euxo pipefail
 
 export PREFIX="$HOME/opt/cross"
-export TARGET=i386F-elf
+export TARGET=i386-elf
 export PATH="$PREFIX/bin:$PATH"
 
 export BINUTILS=binutils-2.33.1
