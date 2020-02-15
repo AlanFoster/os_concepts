@@ -45,6 +45,18 @@ The OS image can then be created within docker via:
 make
 ```
 
+This will generate an `os.img` file which can be loaded into qemu, either directly on your host or with docker:
+
+```
+make curses
+```
+
+To exit qemu in curses mode, press `Esc+2`, and within the qemu menu type quit.
+
+Example:
+
+![Running os with simple input/output within docker](docker-qemu.gif)
+
 ## Debugging
 
 Ensure gdb is available and you have installed [gdb-dashboard](https://github.com/cyrus-and/gdb-dashboard):

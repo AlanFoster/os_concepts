@@ -37,7 +37,10 @@ disk.img: os.img
 	nasm -f bin $< -O0 -o $@
 
 run: disk.img
-	qemu-system-x86_64 -blockdev driver=file,node-name=f0,filename=$< -device floppy,drive=f0
+	qemu-system-i386 -blockdev driver=file,node-name=f0,filename=$< -device floppy,drive=f0
+
+curses: disk.img
+	qemu-system-i386 -blockdev driver=file,node-name=f0,filename=$< -device floppy,drive=f0 -curses
 
 debug: disk.img kernel.elf
 	${GDB} -x debug.gdb
