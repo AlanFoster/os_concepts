@@ -3,6 +3,7 @@
 #include "../drivers/ports.h"
 #include "../drivers/screen.h"
 #include "../kernel/kernel.h"
+#include "../kernel/util.h"
 
 #define KEYBOARD_STATUS_PORT 0x64
 #define KEYBOARD_DATA_PORT 0x60
@@ -31,7 +32,8 @@ const char upper_scancode_ascii[] = {
     '?',
     '!',
     '@',
-    '£',
+    // £ sign
+    '\xa3',
     '$',
     '%',
     '^',
