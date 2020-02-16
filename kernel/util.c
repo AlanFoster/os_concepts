@@ -1,8 +1,4 @@
-void memory_copy(char *dest, char *source, int nbytes) {
-    for (int i = 0; i < nbytes; i++) {
-        dest[i] = source[i];
-    }
-}
+#include "util.h"
 
 int atoi(char s[]) {
     int n = 0;
@@ -55,29 +51,35 @@ void itoa(int num, char str_buffer[]) {
 }
 
 void itohex(int num, char str_buffer[]) {
-    int i = 6;
+    int i = 0;
 
-    str_buffer[0] = '0';
-    str_buffer[1] = 'x';
-    str_buffer[i--] = '\0';
+    // When num is 0, ensure 0x0 is returned
+    if (num == 0) {
+        str_buffer[i++] = '0';
+    } else {
+        while ( num > 0 ) {
+            char ascii_value = (num & 0xF) + '0';
 
-    for (; i > 1; i--) {
-        char ascii_value = (num & 0xF) + '0';
+            // If the ascii value is > ascii 9, then add 7 to move to the a-f character range
+            if (ascii_value > '9') {
+                ascii_value += 7;
+            }
 
-        // If the ascii value is > ascii 9, then add 7 to move to the a-f character range
-        if (ascii_value > '9') {
-            ascii_value += 7;
+            str_buffer[i++] = ascii_value;
+            num >>= 4;
         }
-
-        str_buffer[i] = ascii_value;
-        num >>= 4;
     }
+
+    str_buffer[i++] = 'x';
+    str_buffer[i++] = '0';
+    str_buffer[i++] = '\0';
+    reverse(str_buffer);
 }
 
-void memory_set(char *dest, char val, int amount) {
-    for (int i = 0; i < amount; i++) {
-        dest[i] = val;
-    }
+void append(char str[], char c) {
+    int len = strlen(str);
+    str[len] = c;
+    str[len + 1] = '\0';
 }
 
 int strcmp(char *str1, char *str2) {

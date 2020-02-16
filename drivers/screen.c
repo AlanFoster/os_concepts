@@ -1,6 +1,7 @@
 #include <stdint.h>
 #include "screen.h"
 #include "ports.h"
+#include "../kernel/mem.h"
 #include "../kernel/util.h"
 #include <stdarg.h>
 

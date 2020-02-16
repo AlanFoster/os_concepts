@@ -3,7 +3,7 @@
 #include "../drivers/ports.h"
 #include "../drivers/screen.h"
 #include "../kernel/kernel.h"
-#include "../kernel/util.h"
+#include "../kernel/mem.h"
 
 #define KEYBOARD_STATUS_PORT 0x64
 #define KEYBOARD_DATA_PORT 0x60

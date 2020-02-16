@@ -1,3 +1,4 @@
+# For docker debugging, `-display none` is required
 target remote | qemu-system-i386 -S -gdb stdio -fda disk.img
 
 set disassembly-flavor intel
