@@ -42,6 +42,9 @@ run: disk.img
 curses: disk.img
 	qemu-system-i386 -blockdev driver=file,node-name=f0,filename=$< -device floppy,drive=f0 -curses
 
+bochs: disk.img
+	bochs
+
 debug: disk.img kernel.elf
 	${GDB} -x debug.gdb
 

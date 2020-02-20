@@ -6,3 +6,8 @@
 .gdb_history
 .vscode
 core
+bchsout.txt
+.fuse_*
+.idea
+bochsout.txt
+snapshot.txt

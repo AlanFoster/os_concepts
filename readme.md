@@ -65,6 +65,21 @@ Ensure gdb is available and you have installed [gdb-dashboard](https://github.co
 make debug
 ```
 
+## Using bochs
+
+Bochs can be easier to debug than qemu. In particular, the graphical debugging tool is useful for showing the
+contents of registers, the IDT, the GDT, and paging information.
+
+```
+make clean bochs
+```
+
+To trigger a [bochs breakpoint](https://wiki.osdev.org/Bochs#Magic_Breakpoint) within assembly:
+
+```
+xchg bx, bx
+```
+
 ## Notes
 
 - The stack grows downwards in terms of memory
