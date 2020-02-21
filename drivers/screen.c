@@ -135,7 +135,7 @@ void print_string(char *format, ...) {
             print_string(str_buffer);
         } else if (format[i] == '%' && format[i + 1] == 'x') {
             i++; // Skip the percentage character
-            int number = va_arg(args, int);
+            uint32_t number = va_arg(args, int);
             itohex(number, str_buffer);
             print_string(str_buffer);
         } else if (format[i] == '\e') {

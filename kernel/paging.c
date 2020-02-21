@@ -43,7 +43,7 @@ void init_paging() {
         firstPageEntryTable[i].page_address = (i * 0x1000) >> 11;
     }
 
-    // // // Update the page directory to point to the page entries
+    // Update the page directory to point to the page entries
     pageDirectory[0].page_table_address =  ((uint32_t) (firstPageEntryTable) >> 11);
     pageDirectory[0].present = 1;
     pageDirectory[0].rw = 1;
@@ -59,4 +59,7 @@ void init_paging() {
         print_string("Did not set up paging correctly\n");
         return;
     }
+
+    uint32_t *ptr = (uint32_t*) 0xA0000000;
+    uint32_t do_page_fault = *ptr;
 }

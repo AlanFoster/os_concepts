@@ -71,7 +71,7 @@ typedef struct PageDirectoryEntry {
     uint32_t available: 2;
 
     /**
-    * The page table address
+    * The physical page table address, shifted right 11 bits
     **/
     uint32_t page_table_address: 20;
 
@@ -137,7 +137,7 @@ typedef struct PageTableEntry {
     uint32_t available: 2;
 
     /**
-    * The pphysical page table address
+    * The physical page address, shifted right 11 bits
     **/
     uint32_t page_address: 20;
 

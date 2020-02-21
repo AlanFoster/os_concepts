@@ -16,13 +16,16 @@ ALIGN 4
 ; Whether the handler has a dummy error code or not, this is the shared logic required
 shared_isr_handler_logic:
     ; 1 - Pushing the state on to the stack in preparation for calling the handler
-	mov ax, ds ; Lower 16-bits of eax = ds.
-	push eax ; save the data segment descriptor
-	mov ax, 0x10  ; Load the kernel data segment descriptor
+	mov ax, ds		; Lower 16-bits of eax = ds.
+	push eax		; save the data segment descriptor
+	mov ax, 0x10	; Load the kernel data segment descriptor
 	mov ds, ax
 	mov es, ax
 	mov fs, ax
 	mov gs, ax
+
+	mov eax, cr2
+	push eax		; Page fault errors are stored in the second control register
 
 	; push esp ; TODO: registers_t *r
     cld ; sysV ABI require clear DF
@@ -72,7 +75,7 @@ shared_irq_handler_logic:
 [global isr%1]
 isr%1:
     cli
-    push 0xff    ; Push the current interupt handler, note that no dummy code was pushed
+    push byte %1     ; Push the current interupt handler, note that no dummy code was pushed
     jmp shared_isr_handler_logic
 %endmacro
 

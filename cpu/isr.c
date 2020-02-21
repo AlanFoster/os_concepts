@@ -73,6 +73,25 @@ void handle_isr(ISR_event e) {
     print_string("error code was: %d\n", e.error_code);
     print_string("interrupt code was: %d\n", e.interrupt_code);
 
+    if (e.interrupt_code == PAGE_FAULT_EXCEPTION) {
+        print_string("Page fault details:\n");
+        uint32_t page_fault_address = e.cr2;
+
+        // Extra details about the page fault are stored within the error code
+        int page_entry_present = !(e.error_code & 0x1); // 1 if page entry was present, 0 if missing
+        int is_write = e.error_code & 0x2; // 1 if fault caused by a write, 0 for read
+        int is_user_mode = e.error_code & 0x4;
+        int is_reserved_write = e.error_code & 0x8; // if 1 reserved bits were set unexpectedly in the page directory entry
+        int is_fetch_instruction = e.error_code & 0x10; // 1 if page fault was caused by a set instruction. Occurs of no execute bit was sit.
+
+        print_string("    address: %x\n", page_fault_address);
+        print_string("    page_entry_present: %d\n", page_entry_present);
+        print_string("    is_write: %d\n", is_write);
+        print_string("    is_user_mode: %d\n", is_user_mode);
+        print_string("    is_reserved_write: %d\n", is_reserved_write);
+        print_string("    is_fetch_instruction: %d\n", is_fetch_instruction);
+    }
+
     for (;;);
 }
 
