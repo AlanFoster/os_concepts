@@ -6,6 +6,7 @@
 #include "../drivers/keyboard.h"
 #include "../drivers/ports.h"
 #include "./mem.h"
+#include "./paging.h"
 
 #define SYSTEM_CLOCK_HZ 100
 #define RED "\e[31m"
@@ -24,8 +25,7 @@ void print_help() {
 
 
 void test_kmalloc() {
-    uint32_t physical_address;
-    uint32_t allocated_memory = kmalloc(0, 1, &physical_address);
+    uint32_t allocated_memory = kmalloc(0, 1);
     print_string("Allocated memory: %x\n", allocated_memory);
 }
 
@@ -56,6 +56,7 @@ void main() {
     isr_install();
     init_timer(SYSTEM_CLOCK_HZ);
     init_keyboard();
+    init_paging();
 
     print_string("type " CYAN "help" RESET " to see the available commands\n");
     print_string("> ");

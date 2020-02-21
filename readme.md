@@ -26,9 +26,10 @@ The cross compiler can either run within docker, or can be installed on your hos
 ```
 ./install_crosscompiler.sh binutils
 ./install_crosscompiler.sh gcc
+./install_crosscompiler.sh gdb
 ```
 
-This will enable access to both `i686-elf-gcc` and `i686-elf-ld`, which can be used to compile the OS.
+This will enable access to both `i686-elf-gcc`, `i686-elf-ld`, and `i686-elf-gdb`, which can be used to compile and debug the OS.
 
 ## Using docker
 
@@ -67,8 +68,8 @@ make debug
 
 ## Using bochs
 
-Bochs can be easier to debug than qemu. In particular, the graphical debugging tool is useful for showing the
-contents of registers, the IDT, the GDT, and paging information.
+Bochs, an alternative to qemu, provides additinoal graphical debugging functionality. This is useful for showing the
+contents of registers, the IDT, the GDT, and paging information:
 
 ```
 make clean bochs
@@ -80,11 +81,64 @@ To trigger a [bochs breakpoint](https://wiki.osdev.org/Bochs#Magic_Breakpoint) w
 xchg bx, bx
 ```
 
+### Memory layout
+
+Currently the memory layout is:
+
+```
+---------------------------
+
+    VGA text mode buffer
+
+--------------------------- [0xB8000]
+
+          Unused
+
+--------------------------- [0x90000] <-- Stack pointer. Grows downwards. Set by the bootloader.
+     vvvvv Stack vvvvv
+
+
+
+     ^^^^^ heap ^^^^^
+--------------------------- [0x50000] <-- Heap pointer. Grows upwards. Set by mem.c for now.
+
+           Unused
+
+--------------------------- [0x7e00]
+
+        Boot Loader
+         512 Bytes
+    (Loads Kernel at 0x1000)
+
+--------------------------- [0x7C00]
+
+        Kernel Loaded
+
+--------------------------- [0x1000]
+
+
+        BIOS / etc.
+
+--------------------------- [0x0000]
+```
+
+To view the sections of the kernel:
+
+```
+make kernel.elf
+readelf --sections kernel.elf
+```
+
+## Future problems
+
+- If the kernel becomes too large, reading from disk will trample 0x7c00 - our bootloader
+
 ## Notes
 
 - The stack grows downwards in terms of memory
 - The easiest way to see specific calling conventions between the `caller` and `callee` is with [godbolt](https://godbolt.org/), in conjunction with reading [Calling convention](https://en.wikipedia.org/wiki/Calling_convention)
 - Useful commands: dumping stack `x/100w $esp+4`,`info registers`, `info frame`
+- You can use `si` to step from C extern calls directly into the assembly instructions
 
 ## Resources
 

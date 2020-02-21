@@ -4,7 +4,7 @@
 
 C_SOURCES = $(wildcard kernel/*.c drivers/*.c cpu/*.c)
 HEADERS = $(wildcard kernel/*.h drivers/*.h cpu/*.h)
-OBJ = ${C_SOURCES:.c=.o cpu/interrupts.o}
+OBJ = ${C_SOURCES:.c=.o cpu/interrupts.o kernel/page_directory.o}
 # Debugging symbols enabled
 CFLAGS = -g -Wall -Wextra
 
@@ -37,7 +37,10 @@ disk.img: os.img
 	nasm -f bin $< -O0 -o $@
 
 run: disk.img
-	qemu-system-i386 -blockdev driver=file,node-name=f0,filename=$< -device floppy,drive=f0
+	qemu-system-i386 -blockdev driver=file,node-name=f0,filename=$< -device floppy,drive=f0 -d page
+
+run_bochs: disk.img
+	bochs
 
 curses: disk.img
 	qemu-system-i386 -blockdev driver=file,node-name=f0,filename=$< -device floppy,drive=f0 -curses
