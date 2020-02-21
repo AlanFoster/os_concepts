@@ -8,7 +8,7 @@ export PATH="$PREFIX/bin:$PATH"
 
 export BINUTILS=binutils-2.33.1
 export GCC=gcc-7.4.0
-export GDB=gdb-8.2.1
+export GDB=gdb-9.1
 
 compile_binutils() {
     mkdir -p /tmp/src
@@ -65,7 +65,7 @@ compile_gdb() {
 
     mkdir -p gdb-build
     cd gdb-build
-    ../${GDB}/configure --target=$TARGET --prefix="$PREFIX" --disable-nls --enable-languages=c,c++ --without-headers
+    ../${GDB}/configure --target=$TARGET --prefix="$PREFIX" --disable-nls --enable-languages=c,c++ --without-headers --with-python=/usr/bin/python3
 
     make
     make install
