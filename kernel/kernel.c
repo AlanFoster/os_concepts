@@ -50,7 +50,7 @@ void on_user_input(char *user_input) {
     print_string("> ");
 }
 
-void main() {
+void kernel_main() {
     clear_screen();
     load_idt();
     isr_install();
