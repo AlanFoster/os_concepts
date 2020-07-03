@@ -60,7 +60,7 @@ Example:
 
 ## Debugging
 
-Ensure gdb is available and you have installed [gdb-dashboard](https://github.com/cyrus-and/gdb-dashboard):
+You can use [pwndbg](https://github.com/pwndbg/pwndbg):
 
 ```
 make debug
