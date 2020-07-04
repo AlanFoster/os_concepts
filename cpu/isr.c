@@ -9,6 +9,7 @@
 #define SLAVE_COMMAND 0xA0
 #define SLAVE_DATA (SLAVE_COMMAND + 1)
 #define TOTAL_HANDLERS 256
+#define PIC_END_OF_INTERRUPT 0x20
 
 InterruptHandler interrupt_handlers[TOTAL_HANDLERS];
 
@@ -99,9 +100,9 @@ void handle_irq(InterruptEvent e) {
     // Send an EOI (End of interrupt) signal to master and slave
     // PICs as required.
     if (e.interrupt_code >= 40) {
-        port_byte_out(SLAVE_COMMAND, 0x20);
+        port_byte_out(SLAVE_COMMAND, PIC_END_OF_INTERRUPT);
     }
-    port_byte_out(MASTER_COMMAND, 0x20);
+    port_byte_out(MASTER_COMMAND, PIC_END_OF_INTERRUPT);
 
     // If a handler is present, trigger it
     InterruptHandler handler = interrupt_handlers[e.interrupt_code];
