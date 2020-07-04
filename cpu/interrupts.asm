@@ -14,18 +14,28 @@ extern handle_irq
 ALIGN 4
 
 ; Whether the handler has a dummy error code or not, this is the shared logic required
+; Shared isr logic handling, which:
+;   - Saves the current calling frame register's on to the stack for after interrupt handling occurs
+;   - Changes to the kernel data segments
+;   - Calls the C fault handler handler
+;   - Restores the previous stack frame from before the interrupt occurred
 shared_isr_handler_logic:
-    ; 1 - Pushing the state on to the stack in preparation for calling the handler
-	mov ax, ds		; Lower 16-bits of eax = ds.
-	push eax		; save the data segment descriptor
-	mov ax, 0x10	; Load the kernel data segment descriptor
+	; Push the old registers before the interrupt request was triggered
+	; edi, esi, ebp, esp, ebx, edx, ecx, eax
+	pusha
+
+	mov eax, cr2
+	push eax		; Page fault errors are stored in the second control register
+
+    ; Push the state on to the stack in preparation for calling the handler
+	mov ax, ds ; Lower 16-bits of eax = ds.
+	push eax ; save the data segment descriptor
+
+	mov ax, 0x10  ; Load the kernel data segment descriptor
 	mov ds, ax
 	mov es, ax
 	mov fs, ax
 	mov gs, ax
-
-	mov eax, cr2
-	push eax		; Page fault errors are stored in the second control register
 
 	; push esp ; TODO: registers_t *r
     cld ; sysV ABI require clear DF
@@ -34,20 +44,37 @@ shared_isr_handler_logic:
     call handle_isr
 
     ; 3. Cleanup + Returning
-	pop eax
+
+	pop eax         ; Retrieve the original data segment descriptor, and set up the registers against
 	mov ds, ax
 	mov es, ax
 	mov fs, ax
 	mov gs, ax
-	add esp, 8 ; Remove error code + interrupt number from the isr assembly handlers
+
+	pop eax			; Retrieve and discard the original control register value
+	popa 			; Populate the registers again from where we came from before the interrupt
+
+	add esp, 8      ; Remove error code + interrupt number from the isr assembly handlers
 	sti
     iret ; Interrupt return
 
-; Shared pic irq logic handling
+; Shared pic irq logic handling, which:
+;   - Saves the current calling frame register's on to the stack for after interrupt handling occurs
+;   - Changes to the kernel data segments
+;   - Calls the C interrupt handler
+;   - Restores the previous stack frame from before the interrupt occurred
 shared_irq_handler_logic:
-    ; 1 - Pushing the state on to the stack in preparation for calling the handler
+	; Push the old registers before the interrupt request was triggered
+	; edi, esi, ebp, esp, ebx, edx, ecx, eax
+	pusha
+
+	mov eax, cr2
+	push eax		; Page fault errors are stored in the second control register
+
+    ; Push the state on to the stack in preparation for calling the handler
 	mov ax, ds ; Lower 16-bits of eax = ds.
 	push eax ; save the data segment descriptor
+
 	mov ax, 0x10  ; Load the kernel data segment descriptor
 	mov ds, ax
 	mov es, ax
@@ -61,12 +88,17 @@ shared_irq_handler_logic:
     call handle_irq
 
     ; 3. Cleanup + Returning
-	pop eax
+
+	pop eax         ; Retrieve the original data segment descriptor, and set up the registers against
 	mov ds, ax
 	mov es, ax
 	mov fs, ax
 	mov gs, ax
-	add esp, 8 ; Remove error code + interrupt number from the isr assembly handlers
+
+	pop eax			; Retrieve and discard the original control register value
+	popa 			; Populate the registers again from where we came from before the interrupt
+
+	add esp, 8      ; Remove error code + interrupt number from the isr assembly handlers
 	sti
     iret ; Interrupt return
 

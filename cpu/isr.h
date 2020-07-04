@@ -42,14 +42,19 @@
 
 typedef struct {
     /**
+     * The previous data segment descriptor
+     */
+    uint32_t datasegment;
+
+    /**
      * The cr2 control register
      */
     uint32_t cr2;
 
     /**
-     * The previous data segment descriptor
+     * The old register state before the interrupt occurred
      */
-    uint32_t datasegment;
+    uint32_t edi, esi, ebp, esp, ebx, edx, ecx, eax;
 
     /**
      * The interrupt code, i.e. 0 for division by zero exception when a
@@ -68,11 +73,11 @@ typedef struct {
     uint32_t eflags;
     uint32_t user_esp;
     uint32_t user_ss;
-} ISR_event;
+} InterruptEvent;
 
-typedef void (*IRQ_Handler)(ISR_event);
+typedef void (*InterruptHandler)(InterruptEvent);
 
 void isr_install();
-void register_interrupt_handler(uint8_t interrupt_code, IRQ_Handler handler);
+void register_interrupt_handler(uint8_t interrupt_code, InterruptHandler handler);
 
 #endif

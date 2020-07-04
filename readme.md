@@ -150,3 +150,4 @@ readelf --sections kernel.elf
 - [Intel® 64 and IA-32 Architectures Software Developer’s Manual](https://www.intel.co.uk/content/www/uk/en/architecture-and-technology/64-ia-32-architectures-software-developer-system-programming-manual-325384.html)
 - [print memory address and value of c arguments](https://stackoverflow.com/questions/31972345/how-to-print-the-memory-address-and-the-value-of-the-arguments-of-a-c-c-functi)
 - [Ascii escape sequences](http://ascii-table.com/ansi-escape-sequences.php)
+- [OS Interrupts](https://alex.dzyoba.com/blog/os-interrupts/)

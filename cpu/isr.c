@@ -10,7 +10,7 @@
 #define SLAVE_DATA (SLAVE_COMMAND + 1)
 #define TOTAL_HANDLERS 256
 
-IRQ_Handler interrupt_handlers[TOTAL_HANDLERS];
+InterruptHandler interrupt_handlers[TOTAL_HANDLERS];
 
 // Error isrs
 extern void isr0();
@@ -68,7 +68,7 @@ void register_error_handling(void);
 void remap_pic_irq(void);
 void register_pic_irqs(void);
 
-void handle_isr(ISR_event e) {
+void handle_isr(InterruptEvent e) {
     print_string("isr triggered:\n");
     print_string("error code was: %d\n", e.error_code);
     print_string("interrupt code was: %d\n", e.interrupt_code);
@@ -95,7 +95,7 @@ void handle_isr(ISR_event e) {
     for (;;);
 }
 
-void handle_irq(ISR_event e) {
+void handle_irq(InterruptEvent e) {
     // Send an EOI (End of interrupt) signal to master and slave
     // PICs as required.
     if (e.interrupt_code >= 40) {
@@ -104,7 +104,7 @@ void handle_irq(ISR_event e) {
     port_byte_out(MASTER_COMMAND, 0x20);
 
     // If a handler is present, trigger it
-    IRQ_Handler handler = interrupt_handlers[e.interrupt_code];
+    InterruptHandler handler = interrupt_handlers[e.interrupt_code];
     if (handler != 0) {
         interrupt_handlers[e.interrupt_code](e);
     }
@@ -199,6 +199,6 @@ void register_pic_irqs(void) {
     set_idt_gate(47, (uint32_t) irq15);
 }
 
-void register_interrupt_handler(uint8_t interrupt_code, IRQ_Handler handler) {
+void register_interrupt_handler(uint8_t interrupt_code, InterruptHandler handler) {
     interrupt_handlers[interrupt_code] = handler;
 }

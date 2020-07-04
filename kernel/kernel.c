@@ -19,6 +19,7 @@ void print_help() {
     print_string("  " GREEN "ticks" RESET " - print the total cpu ticks since boot\n");
     print_string("  " GREEN "count" RESET " - count in hex\n");
     print_string("  " GREEN "kmalloc" RESET " - test kmalloc\n");
+    print_string("  " GREEN "page_fault" RESET " - test page fault handling\n");
     print_string("  " GREEN "halt" RESET " - halt the machine\n");
     print_string("  " GREEN "help" RESET " - print the available instructions\n");
 }
@@ -43,6 +44,11 @@ void on_user_input(char *user_input) {
         for (int i = 0 ; i <= 32; i++) {
             print_string("int: %d - hex: " YELLOW "%x" RESET "\n", i, i);
         }
+    } else if (strcmp(user_input, "page_fault") == 0) {
+        print_string(RED "about to page fault\n" RESET);
+
+        uint32_t *ptr = (uint32_t*) 0xA0000000;
+        uint32_t do_page_fault = *ptr;
     } else {
         print_string(RED "unknown command\n" RESET);
         print_help();
