@@ -115,7 +115,7 @@ isr%1:
 [global isr%1]
 isr%1:
     cli
-    push byte 123    ; Push dummy error code
+    push byte -1    ; Push dummy error code
     push byte %1     ; Push the current interupt number
 
     jmp shared_isr_handler_logic
