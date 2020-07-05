@@ -7,6 +7,7 @@
 #include "../drivers/ports.h"
 #include "./mem.h"
 #include "./paging.h"
+#include "./fs.h"
 
 #define SYSTEM_CLOCK_HZ 100
 #define RED "\e[31m"
@@ -24,7 +25,6 @@ void print_help() {
     print_string("  " GREEN "halt" RESET " - halt the machine\n");
     print_string("  " GREEN "help" RESET " - print the available instructions\n");
 }
-
 
 void test_kmalloc() {
     uint32_t allocated_memory = kmalloc(0, 1);
@@ -61,6 +61,180 @@ void on_user_input(char *user_input) {
     print_string("> ");
 }
 
+// typedef struct FileSystemNode {
+//     char name[128];
+// } FileSystemNode;
+
+#define FILE_NAME_SIZE 128
+#define MAXIMUM_FILES 256
+#define MAXIMUM_CHILDREN 16
+#define MAX_IN_MEMORY_FILE_CONTENT_LENGTH 128
+
+// In Memory Filesystem
+
+enum InMemoryFileType {
+    IN_MEMORY_FILE = 0,
+    IN_MEMORY_DIRECTORY = 1 << 0
+};
+
+typedef struct InMemoryFileNode {
+  char name[FILE_NAME_SIZE];
+  uint32_t length; // In bytes
+  char content[MAX_IN_MEMORY_FILE_CONTENT_LENGTH];
+  enum InMemoryFileType type;
+  uint32_t childrenCount;
+  struct InMemoryFileNode *children;
+} InMemoryFileNode;
+
+InMemoryFileNode createInMemoryFile(
+  char *name,
+  char *content
+) {
+  InMemoryFileNode InMemoryFileNode;
+  strncopy(InMemoryFileNode.name, name, FILE_NAME_SIZE);
+  strncopy(InMemoryFileNode.content, content, MAX_IN_MEMORY_FILE_CONTENT_LENGTH);
+  InMemoryFileNode.length = strlen(InMemoryFileNode.content);
+  InMemoryFileNode.type = IN_MEMORY_FILE;
+  InMemoryFileNode.childrenCount = 0;
+  InMemoryFileNode.children = NULL;
+
+  return InMemoryFileNode;
+}
+
+InMemoryFileNode createInMemoryDirectory(
+  char *name,
+  int childrenCount,
+  InMemoryFileNode *children
+) {
+  InMemoryFileNode InMemoryFileNode;
+  strncopy(InMemoryFileNode.name, name, FILE_NAME_SIZE);
+  strncopy(InMemoryFileNode.content, "", MAX_IN_MEMORY_FILE_CONTENT_LENGTH);
+  InMemoryFileNode.length = 0;
+  InMemoryFileNode.type = IN_MEMORY_DIRECTORY;
+  InMemoryFileNode.childrenCount = childrenCount;
+  InMemoryFileNode.children = children;
+
+  return InMemoryFileNode;
+}
+
+void mockPrintTreeDescription(InMemoryFileNode node, int childCount, int childrenCount, int depth) {
+  for (int i = 0 ; i < depth ; i++) {
+    if (i % 2 == 0) {
+      print_string("| ");
+    }
+  }
+
+  if (childCount < childrenCount - 1) {
+    print_string("|- ");
+  } else {
+    if (node.type == IN_MEMORY_DIRECTORY) {
+      print_string("|- ");
+    } else {
+      print_string("^- ");
+    }
+  }
+
+  print_string(
+    "%s\n",
+    node.name
+  );
+}
+
+void mockPrintTreeRecursive(InMemoryFileNode node, int childCount, int childrenCount, int depth) {
+  if (node.type == IN_MEMORY_FILE) {
+    mockPrintTreeDescription(node, childCount, childrenCount, depth);
+  } else {
+    mockPrintTreeDescription(node, 0, 0, depth);
+
+    for (uint32_t i = 0 ; i < node.childrenCount ; i++ ){
+      mockPrintTreeRecursive(node.children[i], i, node.childrenCount, depth + 1);
+    }
+  }
+}
+
+void printInMemoryTree(InMemoryFileNode node) {
+  int depth = 0;
+
+  print_string(".\n");
+
+  for (uint32_t i = 0 ; i < node.childrenCount ; i++ ){
+    mockPrintTreeRecursive(
+      node.children[i], i, node.childrenCount, depth
+    );
+  }
+  print_string("\n");
+}
+
+void readInMemoryFile(InMemoryFileNode node, char *source) {
+  strncopy(source, node.content, MAX_IN_MEMORY_FILE_CONTENT_LENGTH);
+}
+
+void cat(InMemoryFileNode node) {
+  if (node.type == IN_MEMORY_DIRECTORY) {
+    print_string("%s is a directory\n", node.name);
+    return;
+  }
+
+  char contents[MAX_IN_MEMORY_FILE_CONTENT_LENGTH];
+  readInMemoryFile(node, contents);
+  print_string("%s\n", contents);
+}
+
+void filesystem_test() {
+  InMemoryFileNode helloFolderChildren[4] = {
+    createInMemoryFile(
+      "a.txt",
+      "the content of a"
+    ),
+    createInMemoryFile(
+      "b.txt",
+      "the content of b"
+    ),
+    createInMemoryFile(
+      "c.txt",
+      "the content of c"
+    ),
+    createInMemoryFile(
+      "d.txt",
+      "the content of d"
+    ),
+  };
+
+  InMemoryFileNode helloFolder = createInMemoryDirectory(
+    "helloFolder",
+    4,
+    helloFolderChildren
+  );
+
+  InMemoryFileNode helloWorldTxt = createInMemoryFile(
+    "helloWorld.txt",
+    "hello world, this is some content!"
+  );
+
+  InMemoryFileNode rootChildren[2] = {
+    helloFolder,
+    helloWorldTxt
+  };
+
+  InMemoryFileNode root = createInMemoryDirectory(
+    "root",
+    2,
+    rootChildren
+  );
+
+  print_string("> tree\n");
+  printInMemoryTree(root);
+
+  print_string("> cat root\n");
+  cat(root);
+
+  print_string("> cat root/helloWorld.txt\n");
+  cat(root.children[1]);
+
+  print_string("> cat root/helloFolder/a.txt\n");
+  cat(root.children[0].children[0]);
+}
+
 void kernel_main() {
     clear_screen();
     load_idt();
@@ -70,5 +244,8 @@ void kernel_main() {
     init_paging();
 
     print_string("type " CYAN "help" RESET " to see the available commands\n");
+
+    filesystem_test();
+
     print_string("> ");
 }

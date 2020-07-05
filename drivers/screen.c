@@ -138,6 +138,10 @@ void print_string(char *format, ...) {
             uint32_t number = va_arg(args, int);
             itohex(number, str_buffer);
             print_string(str_buffer);
+        } else if (format[i] == '%' && format[i + 1] == 's') {
+            i++; // skip the perecentage character
+            char *string = va_arg(args, char*);
+            print_string(string);
         } else if (format[i] == '\e') {
             i++; // Skip the escape character
 

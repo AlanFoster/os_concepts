@@ -15,13 +15,13 @@ boot:
     mov bp, 0x8000             ; Move our base stack somewhere safe
     mov sp, bp                 ; Move our stack pointer somewhere safe
 
-    mov bx, KERNEL_OFFSET          ; Load the sectors to 0x0000 (ES):KERNEL_OFFSET (BX)
-    mov dh, 15                 ; Specify how many sectors to read
+    mov bx, KERNEL_OFFSET      ; Load the sectors to 0x0000 (ES):KERNEL_OFFSET (BX)
+    mov dh, 30                 ; Specify how many sectors to read
     mov dl, [BOOT_DRIVE]       ; Specify which drive
     call disk_load
 
     call enable_protected_mode
-    jmp halt ; This should never occur
+    jmp halt                   ; This should never occur
 
 halt:
     hlt                        ; Stop

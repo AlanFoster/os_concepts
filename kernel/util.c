@@ -93,3 +93,12 @@ int strcmp(char *str1, char *str2) {
 
     return str1[i] - str2[i];
 }
+
+char *strncopy(char *destination, char *source, uint32_t maximum) {
+  int i;
+  for (i = 0; source[i] != '\0' && i < maximum; i++) {
+    destination[i] = source[i];
+  }
+  destination[i] = '\0';
+  return destination;
+}
