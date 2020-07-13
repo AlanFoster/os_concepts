@@ -81,6 +81,19 @@ To trigger a [bochs breakpoint](https://wiki.osdev.org/Bochs#Magic_Breakpoint) w
 xchg bx, bx
 ```
 
+Or within C:
+
+```c
+asm("xchg %bx, %bx");
+```
+
+### Serial output
+
+For now the kernel attempts to its internal logs to:
+
+- bochs - `serial.txt`
+- qemu - stdout
+
 ### Memory layout
 
 Currently the memory layout is:

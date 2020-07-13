@@ -3,6 +3,7 @@
 #include "ports.h"
 #include "../kernel/mem.h"
 #include "../kernel/util.h"
+#include "../kernel/kprint.h"
 #include <stdarg.h>
 
 #define VIDEO_ADDRESS 0xb8000

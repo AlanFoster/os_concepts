@@ -8,6 +8,7 @@
 #include "./mem.h"
 #include "./paging.h"
 #include "./fs.h"
+#include "./kprint.h"
 
 #define SYSTEM_CLOCK_HZ 100
 #define RED "\e[31m"
@@ -32,6 +33,8 @@ void test_kmalloc() {
 }
 
 void on_user_input(char *user_input) {
+    kprintf("User input detected\n");
+
     if (strcmp(user_input, "ticks") == 0) {
         print_string("the total cpu ticks since boot is: " YELLOW "%d" RESET "\n", get_tick());
     } else if (strcmp(user_input, "halt") == 0) {
@@ -243,9 +246,9 @@ void kernel_main() {
     init_keyboard();
     init_paging();
 
+    kprintf("Boot up successfully\n");
+
     print_string("type " CYAN "help" RESET " to see the available commands\n");
-
     filesystem_test();
-
     print_string("> ");
 }

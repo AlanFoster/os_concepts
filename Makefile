@@ -37,7 +37,7 @@ disk.img: os.img
 	nasm -f bin $< -O0 -o $@
 
 run: disk.img
-	qemu-system-i386 -blockdev driver=file,node-name=f0,filename=$< -device floppy,drive=f0 -d page
+	qemu-system-i386 -blockdev driver=file,node-name=f0,filename=$< -device floppy,drive=f0 -d page -d guest_errors -serial stdio
 
 run_bochs: disk.img
 	bochs
