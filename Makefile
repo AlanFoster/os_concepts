@@ -45,6 +45,11 @@ run_bochs: disk.img
 curses: disk.img
 	qemu-system-i386 -blockdev driver=file,node-name=f0,filename=$< -device floppy,drive=f0 -curses
 
+no_screen: disk.img
+	qemu-system-i386 -blockdev driver=file,node-name=f0,filename=$< -device floppy,drive=f0 -nographic -serial mon:stdio
+	#
+	# TOOD: Add kernel arguments -append 'console=ttys0'
+
 bochs: disk.img
 	bochs
 
