@@ -152,6 +152,7 @@ readelf --sections kernel.elf
 - The easiest way to see specific calling conventions between the `caller` and `callee` is with [godbolt](https://godbolt.org/), in conjunction with reading [Calling convention](https://en.wikipedia.org/wiki/Calling_convention)
 - Useful commands: dumping stack `x/100w $esp+4`,`info registers`, `info frame`
 - You can use `si` to step from C extern calls directly into the assembly instructions
+- Easily compile and run in gdb `gcc -g foo.c && gdb -ex run ./a.out`
 
 ## Resources
 
@@ -165,3 +166,4 @@ readelf --sections kernel.elf
 - [Ascii escape sequences](http://ascii-table.com/ansi-escape-sequences.php)
 - [OS Interrupts](https://alex.dzyoba.com/blog/os-interrupts/)
 - UNIX Implementation - K. Thompson
+- (An introduction to system programming and C)[http://cs-education.github.io/sys/#/lessons]
