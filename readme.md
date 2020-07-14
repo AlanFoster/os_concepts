@@ -24,12 +24,12 @@ make run
 The cross compiler can either run within docker, or can be installed on your host machine:
 
 ```
-./install_crosscompiler.sh binutils
-./install_crosscompiler.sh gcc
-./install_crosscompiler.sh gdb
+./install_crosscompiler.sh all
 ```
 
 This will enable access to both `i686-elf-gcc`, `i686-elf-ld`, and `i686-elf-gdb`, which can be used to compile and debug the OS.
+
+This script has been tested on Ubuntu, Docker, and OS X.
 
 ## Using docker
 
@@ -91,7 +91,7 @@ asm("xchg %bx, %bx");
 
 For now the kernel attempts to its internal logs to:
 
-- bochs - `serial.txt`
+- bochs - `serial.out`
 - qemu - stdout
 
 ### Memory layout

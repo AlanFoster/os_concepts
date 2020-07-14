@@ -4,11 +4,16 @@ set -euxo pipefail
 
 export PREFIX="$HOME/opt/cross"
 export TARGET=i686-elf
-export PATH="$PREFIX/bin:$PATH"
+export PATH="$PREFIX/bin:/usr/local/bin:/usr/bin:/bin:$PATH"
 
 export BINUTILS=binutils-2.33.1
 export GCC=gcc-7.4.0
 export GDB=gdb-9.1
+
+if [[ "$(which python3)" = "" ]]; then
+   echo "Missing python3 dependency"
+   exit 1
+fi
 
 compile_binutils() {
     mkdir -p /tmp/src
@@ -24,7 +29,7 @@ compile_binutils() {
     mkdir -p binutils-build
     cd binutils-build
 
-    ../${BINUTILS}/configure --target=$TARGET --prefix="$PREFIX" --with-sysroot --disable-nls --disable-werror
+    ../${BINUTILS}/configure --target=$TARGET --prefix="$PREFIX" --with-sysroot --disable-nls --disable-multilib --disable-werror
 
     make
     make install
@@ -41,6 +46,10 @@ compile_gcc() {
     fi
     tar xf ${GCC_TAR}
 
+    cd ${GCC}
+    ./contrib/download_prerequisites
+    cd ..
+
     mkdir -p gcc-build
     cd gcc-build
     ../${GCC}/configure --target=$TARGET --prefix="$PREFIX" --disable-nls --enable-languages=c,c++ --without-headers
@@ -50,7 +59,6 @@ compile_gcc() {
     make install-gcc
     make install-target-libgcc
 }
-
 
 compile_gdb() {
     mkdir -p /tmp/src
@@ -65,7 +73,7 @@ compile_gdb() {
 
     mkdir -p gdb-build
     cd gdb-build
-    ../${GDB}/configure --target=$TARGET --prefix="$PREFIX" --disable-nls --enable-languages=c,c++ --without-headers --with-python=/usr/bin/python3
+    ../${GDB}/configure --target=$TARGET --prefix="$PREFIX" --disable-nls --enable-languages=c,c++ --without-headers --with-python=$(which python3)
 
     make
     make install
@@ -79,6 +87,11 @@ fi
 target="$1"
 
 case $target in
+    all)
+        compile_binutils
+        compile_gcc
+        compile_gdb
+    ;;
     binutils)
         compile_binutils
     ;;
