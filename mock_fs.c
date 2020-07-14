@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <stdint.h>
-#include <stdlib.h>
+// #include <stdlib.h>
 
 #undef NULL
 #define NULL 0
@@ -30,6 +30,17 @@ uint32_t strlen(const char *str) {
         i++;
     }
     return i;
+}
+
+int strcmp(char *str1, char *str2) {
+    int i = 0;
+    for ( i = 0 ; str1[i] == str2[i]; i++) {
+        if (str1[i] == '\0') {
+            return 0;
+        }
+    }
+
+    return str1[i] - str2[i];
 }
 
 void crashAndBurn(char *message) {
@@ -177,7 +188,7 @@ void writeContent(ino_t ino, char *buffer, int size) {
 }
 
 // TODO: Confirm what happens if you try to read more data than what's available
-void readContent(ino_t ino, char *buffer, int size) {
+void readContent(ino_t ino, char *buffer, uint32_t size) {
   inode *node = inode_lookup(memoryChunk, ino);
 
   int readAmount;
@@ -199,28 +210,7 @@ ino_t mkfolder(char *name, ino_t parent) {
   return ino;
 }
 
-///////////////////////////////////////////////////////////////////////////
-// Simple programs for viewing the file system
-///////////////////////////////////////////////////////////////////////////
-
-void ls(ino_t ino) {
-  inode *node = inode_lookup(memoryChunk, ino);
-  printf("type: %d\n", node->type_and_permissions);
-  printf("length: %d\n", node->length);
-  for (int i = 0, length = node->length ; i < length; i++) {
-    DirectoryEntry *entry = node->direct_block_pointer_directories[i];
-    printf("Child %d: File name: '%s'\n", i, entry->d_name);
-  }
-}
-
-void cat(ino_t ino) {
-  inode *node = inode_lookup(memoryChunk, ino);
-  char content[BUFSIZ];
-  readContent(ino, content, node->length);
-  printf("The file content is: %s\n", content);
-}
-
-int main(void) {
+ino_t initRamdisk() {
   memoryChunk = (char *) malloc(MAX_FILESYSTEM_SIZE);
 
   ino_t root = createRootDirectory();
@@ -239,8 +229,8 @@ int main(void) {
   // Create 5 arbitrary files within the subfolder with the same name and value
   for (int i = 0 ; i < 9; i++) {
     ino_t node = createINodeFile();
-    char fileName[10] = "0.txt";
-    char fileContent[10] = "Content from file number 0";
+    char fileName[] = "0.txt";
+    char fileContent[] = "Content from file number 0";
     fileName[0] = '0' + i;
     fileContent[strlen(content) - 1] = '0' + i;
 
@@ -248,7 +238,65 @@ int main(void) {
     createDirectoryEntry(subFolder, fileName, node);
   }
 
-  ls(root);
-  cat(helloWorldTxt);
-  ls(subFolder);
+  return root;
+}
+
+///////////////////////////////////////////////////////////////////////////
+// Virtual file system
+///////////////////////////////////////////////////////////////////////////
+
+// TODO:
+// typedef struct vfs_node {
+// } VFSNode;
+
+///////////////////////////////////////////////////////////////////////////
+// Simple programs for viewing the file system
+///////////////////////////////////////////////////////////////////////////
+
+ino_t find(ino_t root, char *name) {
+  inode *node = inode_lookup(memoryChunk, root);
+
+  if (strcmp(name, "/") == 0) {
+      return root;
+  }
+
+  for (int i = 0, length = node->length ; i < length; i++) {
+    DirectoryEntry *entry = node->direct_block_pointer_directories[i];
+    print_string("%s\n", entry->d_name);
+    if (strcmp(entry->d_name, name) == 0) {
+      return entry->d_ino;
+    }
+  }
+
+  return NULL;
+}
+
+void ls(ino_t root, char *name) {
+  ino_t ino = find(root, name);
+  inode *node = inode_lookup(memoryChunk, ino);
+  printf("type: %d\n", node->type_and_permissions);
+  printf("length: %d\n", node->length);
+  for (int i = 0, length = node->length ; i < length; i++) {
+    DirectoryEntry *entry = node->direct_block_pointer_directories[i];
+    printf("Child %d: File name: '%s'\n", i, entry->d_name);
+  }
+}
+
+void cat(ino_t root, char *name) {
+  ino_t ino = find(root, name);
+  inode *node = inode_lookup(memoryChunk, ino);
+  char content[BUFSIZ];
+  readContent(ino, content, node->length);
+  printf("The file content is: %s\n", content);
+}
+
+int main(void) {
+  ino_t root = initRamdisk();
+
+  print_string("> ls /\n");
+  ls(root, "/");
+  print_string("> cat helloWorld.txt\n");
+  cat(root, "helloWorld.txt");
+  print_string("> ls subFolder\n");
+  ls(root, "subFolder");
 }
