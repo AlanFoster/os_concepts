@@ -1,7 +1,9 @@
 #include <stdio.h>
 #include <stdint.h>
-// #include <stdlib.h>
+#include <stdlib.h>
 
+#undef NULL
+#define NULL 0
 #define FILE_NAME_SIZE 128
 #define MAXIMUM_FILES 256
 #define MAXIMUM_CHILDREN 16
@@ -13,8 +15,8 @@
 // Helpers
 ///////////////////////////////////////////////////////////////
 
-char *strncopy(char *destination, char *source, size_t maximum) {
-  int i;
+char *strncopy(char *destination, char *source, uint32_t maximum) {
+  uint32_t i;
   for (i = 0; source[i] != '\0' && i < maximum; i++) {
     destination[i] = source[i];
   }
@@ -31,7 +33,7 @@ uint32_t strlen(const char *str) {
 }
 
 void crashAndBurn(char *message) {
-  print_string(message);
+  print_string("%s", message);
   while (1);
 }
 
@@ -70,7 +72,10 @@ typedef struct DIR {
 typedef struct inode {
   uint32_t type_and_permissions; // The file type and permissions
   uint32_t length; // The how many  of this
-  uint64_t direct_block_pointer[TOTAL_DIRECT_MEMORY_POINTERS];
+  union {
+    DirectoryEntry* direct_block_pointer_directories[TOTAL_DIRECT_MEMORY_POINTERS];
+    char* direct_block_pointer_bytes[TOTAL_DIRECT_MEMORY_POINTERS];
+  } ;
   // Note: We're skipping indirect memory pointers for now
 } inode;
 
@@ -96,7 +101,6 @@ int inodeCount = 2;
 int blockCount = 0;
 char *memoryChunk = NULL;
 
-
 ino_t getFreeINodeID() {
   // Simple bump for now.
   return ++inodeCount;
@@ -117,7 +121,7 @@ void createDirectoryEntry(ino_t parent, char *name, ino_t child) {
   entry->d_ino = child;
 
   // Store a reference to the newly created directory entry within the parent inode
-  parentNode->direct_block_pointer[parentNode->length] = entry
+  parentNode->direct_block_pointer_directories[parentNode->length] = entry;
   (parentNode->length)++;
 }
 
@@ -127,18 +131,18 @@ ino_t createRootDirectory() {
   node->type_and_permissions = INODE_DIRECTORY;
   node->length = 0;
   for (int i = 0 ; i < TOTAL_DIRECT_MEMORY_POINTERS; i++) {
-    node->direct_block_pointer[i] = NULL;
+    node->direct_block_pointer_directories[i] = NULL;
   }
   return ino;
 }
 
-ino_t *createINodeDirectory() {
+ino_t createINodeDirectory() {
   ino_t ino = getFreeINodeID();
   inode *node = inode_lookup(memoryChunk, ino);
   node->type_and_permissions = INODE_DIRECTORY;
   node->length = 0;
   for (int i = 0 ; i < TOTAL_DIRECT_MEMORY_POINTERS; i++) {
-    node->direct_block_pointer[i] = NULL;
+    node->direct_block_pointer_directories[i] = NULL;
   }
   return ino;
 }
@@ -149,7 +153,7 @@ ino_t createINodeFile() {
   node->type_and_permissions = INODE_FILE;
   node->length = 1;  // TODO: Confirm if length is blocks, or bytes
   for (int i = 0 ; i < TOTAL_DIRECT_MEMORY_POINTERS; i++) {
-    node->direct_block_pointer[i] = NULL;
+    node->direct_block_pointer_bytes[i] = NULL;
   }
 
   return ino;
@@ -159,7 +163,7 @@ ino_t createINodeFile() {
 void writeContent(ino_t ino, char *buffer, int size) {
   inode *node = inode_lookup(memoryChunk, ino);
   for (int i = 0 ; i < TOTAL_DIRECT_MEMORY_POINTERS; i++) {
-    node->direct_block_pointer[i] = NULL;
+    node->direct_block_pointer_bytes[i] = NULL;
   }
 
   if (size > 512) {
@@ -169,7 +173,7 @@ void writeContent(ino_t ino, char *buffer, int size) {
   char *block =  (char *) block_lookup(memoryChunk, blockCount++);
   strncopy(block, buffer, size);
   node->length = size;
-  node->direct_block_pointer[0] = block;
+  node->direct_block_pointer_bytes[0] = block;
 }
 
 // TODO: Confirm what happens if you try to read more data than what's available
@@ -184,7 +188,7 @@ void readContent(ino_t ino, char *buffer, int size) {
   }
 
   // TODO: find the right block correctly etc.
-  strncopy(buffer, node->direct_block_pointer[0], readAmount);
+  strncopy(buffer, node->direct_block_pointer_bytes[0], readAmount);
 }
 
 ino_t mkfolder(char *name, ino_t parent) {
@@ -200,7 +204,7 @@ void ls(ino_t ino) {
   printf("type: %d\n", node->type_and_permissions);
   printf("length: %d\n", node->length);
   for (int i = 0, length = node->length ; i < length; i++) {
-    DirectoryEntry *entry = node->direct_block_pointer[i];
+    DirectoryEntry *entry = node->direct_block_pointer_directories[i];
     printf("Child %d: File name: '%s'\n", i, entry->d_name);
   }
 }
@@ -228,7 +232,19 @@ int main(void) {
   createDirectoryEntry(root, "helloWorld.txt", helloWorldTxt);
 
   ino_t subFolder = mkfolder("subFolder", root);
+  // Create 5 arbitrary files within the subfolder with the same name and value
+  for (int i = 0 ; i < 9; i++) {
+    ino_t node = createINodeFile();
+    char fileName[10] = "0.txt";
+    char fileContent[10] = "Content from file number 0";
+    fileName[0] = '0' + i;
+    fileContent[strlen(content) - 1] = '0' + i;
+
+    writeContent(node, fileContent, strlen(content));
+    createDirectoryEntry(subFolder, fileName, node);
+  }
 
   ls(root);
   cat(helloWorldTxt);
+  ls(subFolder);
 }
