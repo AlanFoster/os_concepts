@@ -290,6 +290,19 @@ void cat(ino_t root, char *name) {
   printf("The file content is: %s\n", content);
 }
 
+void touch(ino_t root, char *name) {
+  ino_t ino = find(root, name);
+
+  if (ino != NULL) {
+    // TODO: Update the time modified
+    return;
+  }
+
+  // Create inode for file
+  ino_t node = createINodeFile();
+  createDirectoryEntry(root, name, node);
+}
+
 int main(void) {
   ino_t root = initRamdisk();
 
@@ -299,4 +312,8 @@ int main(void) {
   cat(root, "helloWorld.txt");
   print_string("> ls subFolder\n");
   ls(root, "subFolder");
+  print_string("> touch newFile.txt");
+  touch(root, "newFile.txt");
+  print_string("> ls");
+  ls(root, "/");
 }
