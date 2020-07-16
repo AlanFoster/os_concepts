@@ -241,17 +241,7 @@ ino_t initRamdisk() {
   return root;
 }
 
-///////////////////////////////////////////////////////////////////////////
-// Virtual file system
-///////////////////////////////////////////////////////////////////////////
-
-// TODO:
-// typedef struct vfs_node {
-// } VFSNode;
-
-///////////////////////////////////////////////////////////////////////////
-// Simple programs for viewing the file system
-///////////////////////////////////////////////////////////////////////////
+// In Memory operations
 
 ino_t find(ino_t root, char *name) {
   inode *node = inode_lookup(memoryChunk, root);
@@ -303,17 +293,108 @@ void touch(ino_t root, char *name) {
   createDirectoryEntry(root, name, node);
 }
 
+///////////////////////////////////////////////////////////////////////////
+// Virtual file system
+///////////////////////////////////////////////////////////////////////////
+
+#define MAX_FILE_DESCRIPTORS 14
+
+typedef uint32_t vfs_index;
+
+typedef struct vfs_node {
+  vfs_index index;
+  uint32_t length;
+  // uint43
+} VFSNode;
+
+typedef struct vfs_super_block {
+  // TODO: Learn the best practices around using 'struct' and the alias here:
+  struct vfs_superblock_operations *operations;
+
+  uint32_t blocksize;
+
+  uint32_t current_nodes;
+  uint32_t current_blocks;
+
+  uint32_t max_nodes;
+  uint32_t max_blocks;
+} VFSSuperBlock;
+
+typedef struct vfs_superblock_operations {
+  struct VFSNode *(*alloc_node)(VFSSuperBlock*);
+} VFSSuperBlockOperations;
+
+typedef struct file_descriptor {
+  VFSNode inode_index;
+} FileDescriptor;
+
+typedef struct file_descriptor_table {
+  uint32_t size;
+  uint32_t maxsize;
+  FileDescriptor file_descriptors[MAX_FILE_DESCRIPTORS];
+} FileDescriptorTable;
+
+///////////////////////////////////////////////////////////////////////////
+// Simple programs for viewing the file system
+///////////////////////////////////////////////////////////////////////////
+
+// void vfs_opendir(VFSNode node) {
+
+// }
+
+// void fs_ls(VFSNode node) {
+  // if (node->)
+// }
+
+// VFSNode *vfs_alloc_node(VFSSuperBlock *super_block) {
+//   if (super_block->operations->alloc_node != NULL) {
+//       return super_block->operations->alloc_node(super_block);
+//   }
+//   return NULL;
+// }
+
+VFSNode alloc_node(VFSSuperBlock *super_block) {
+  super_block->current_blocks++;
+};
+
+VFSSuperBlockOperations super_block_operations = {
+  alloc_node: alloc_node
+};
+
+VFSSuperBlock* init_super_block(ino_t root) {
+  VFSSuperBlock *super_block = (VFSSuperBlock *) malloc(sizeof(VFSSuperBlock));
+  VFSSuperBlockOperations *operations = (VFSSuperBlockOperations *) malloc(sizeof(VFSSuperBlockOperations));
+  super_block->blocksize = BLOCK_SIZE;
+  super_block->current_blocks = 0;
+  super_block->current_nodes = 0;
+  super_block->max_nodes = MAX_INODES;
+  super_block->max_blocks = (MAX_FILESYSTEM_SIZE - (MAX_INODES * BLOCK_SIZE)) / BLOCK_SIZE;
+  super_block->operations = &super_block_operations;
+  return super_block;
+}
+
 int main(void) {
   ino_t root = initRamdisk();
 
-  print_string("> ls /\n");
-  ls(root, "/");
-  print_string("> cat helloWorld.txt\n");
-  cat(root, "helloWorld.txt");
-  print_string("> ls subFolder\n");
-  ls(root, "subFolder");
-  print_string("> touch newFile.txt");
-  touch(root, "newFile.txt");
-  print_string("> ls");
-  ls(root, "/");
+  printf("Getting started!\n");
+  VFSSuperBlock *super_block = init_super_block(root);
+  printf("Total stuff for now %d\n", super_block->current_blocks);
+
+  super_block->operations->alloc_node(super_block);
+  printf("After --- %d\n", super_block->current_blocks);
+
+  // VFSNode root =
+
+  // vfs_ls(root);
+
+  // print_string("> ls /\n");
+  // ls(root, "/");
+  // print_string("> cat helloWorld.txt\n");
+  // cat(root, "helloWorld.txt");
+  // print_string("> ls subFolder\n");
+  // ls(root, "subFolder");
+  // print_string("> touch newFile.txt");
+  // touch(root, "newFile.txt");
+  // print_string("> ls");
+  // ls(root, "/");
 }

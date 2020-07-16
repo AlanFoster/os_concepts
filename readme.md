@@ -166,4 +166,5 @@ readelf --sections kernel.elf
 - [Ascii escape sequences](http://ascii-table.com/ansi-escape-sequences.php)
 - [OS Interrupts](https://alex.dzyoba.com/blog/os-interrupts/)
 - UNIX Implementation - K. Thompson
-- (An introduction to system programming and C)[http://cs-education.github.io/sys/#/lessons]
+- [An introduction to system programming and C](http://cs-education.github.io/sys/#/lessons)
+- [Linux VFS Tour](http://tldp.org/LDP/khg/HyperNews/get/fs/vfstour.html)
