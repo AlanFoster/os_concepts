@@ -4,15 +4,15 @@
 #define DIRECTORY_SIZE 1024
 #define ENTRY_SIZE 1024
 
-extern int load_page_directory(PageDirectoryEntry *pageDirectory);
+extern int load_page_directory(struct page_directory_entry *pageDirectory);
 extern int enable_paging();
 
-PageDirectoryEntry *pageDirectory;
-PageTableEntry *firstPageEntryTable;
+struct page_directory_entry *pageDirectory;
+struct page_table_entry *firstPageEntryTable;
 
 void init_paging() {
-    pageDirectory = (PageDirectoryEntry *)  kmalloc(sizeof(PageDirectoryEntry) * DIRECTORY_SIZE, 1);
-    firstPageEntryTable = (PageTableEntry *) kmalloc(sizeof(PageTableEntry) * ENTRY_SIZE, 1);
+    pageDirectory = (struct page_directory_entry *)  kmalloc(sizeof(struct page_directory_entry) * DIRECTORY_SIZE, 1);
+    firstPageEntryTable = (struct PageTableEntry *) kmalloc(sizeof(struct page_table_entry) * ENTRY_SIZE, 1);
 
     // Initialize the page directory to be empty
     for ( int i = 0 ; i < DIRECTORY_SIZE ; i++) {

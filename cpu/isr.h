@@ -40,7 +40,7 @@
 #define IRQ14 46
 #define IRQ15 47
 
-typedef struct {
+struct interrupt_event {
     /**
      * The previous data segment descriptor
      */
@@ -73,11 +73,11 @@ typedef struct {
     uint32_t eflags;
     uint32_t user_esp;
     uint32_t user_ss;
-} InterruptEvent;
+};
 
-typedef void (*InterruptHandler)(InterruptEvent);
+typedef void (*interrupt_handler)(struct interrupt_event);
 
 void isr_install();
-void register_interrupt_handler(uint8_t interrupt_code, InterruptHandler handler);
+void register_interrupt_handler(uint8_t interrupt_code, interrupt_handler handler);
 
 #endif

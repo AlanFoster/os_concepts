@@ -35,5 +35,7 @@ uint32_t kmalloc(uint32_t required_size, int align_to_4KB) {
 
     uint32_t assigned_memory_location = kmalloc_addr_pointer;
     kmalloc_addr_pointer += required_size;
+    print_string("required size %d, aligning? %d", required_size, align_to_4KB);
+    print_string("old value %x and new value %x\n", kmalloc_addr_pointer, kmalloc_addr_pointer);
     return assigned_memory_location;
 }

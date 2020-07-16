@@ -4,7 +4,7 @@
 
 void load_idt() {
     idt_pointer.base = (uint32_t) &idt;
-    idt_pointer.limit = IDT_ENTRIES * sizeof(IDT_entry) - 1;
+    idt_pointer.limit = IDT_ENTRIES * sizeof(struct idt_entry) - 1;
 
     __asm__ __volatile__("lidtl (%0)" : : "r" (&idt_pointer));
 }

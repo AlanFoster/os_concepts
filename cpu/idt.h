@@ -11,7 +11,7 @@
 //
 // This table most be loaded with the lidt instruction
 
-typedef struct {
+struct idt_entry {
     /**
      * Lower bits of the handler's function address location 0..15
      */
@@ -42,18 +42,18 @@ typedef struct {
      * Highest bits of the handler's address 16..31
      */
     uint16_t handler_address_high;
-} __attribute__((packed)) IDT_entry;
+} __attribute__((packed));
 
 /**
  * IDT pointer, similar to the GDT pointer defined within bootloader.asm
  */
-typedef struct {
+struct idt_pointer {
     uint16_t limit;
     uint32_t base;
-} __attribute__((packed)) IDT_pointer;
+} __attribute__((packed));
 
-IDT_entry idt[IDT_ENTRIES];
-IDT_pointer idt_pointer;
+struct idt_entry idt[IDT_ENTRIES];
+struct idt_pointer idt_pointer;
 
 /**
  * Set a handler for the given idt entry

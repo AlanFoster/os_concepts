@@ -28,7 +28,7 @@ void print_help() {
 }
 
 void test_kmalloc() {
-    uint32_t allocated_memory = kmalloc(0, 1);
+    uint32_t allocated_memory = kmalloc(32, 1);
     print_string("Allocated memory: %x\n", allocated_memory);
 }
 
@@ -80,20 +80,20 @@ enum InMemoryFileType {
     IN_MEMORY_DIRECTORY = 1 << 0
 };
 
-typedef struct InMemoryFileNode {
+struct InMemoryFileNode {
   char name[FILE_NAME_SIZE];
   uint32_t length; // In bytes
   char content[MAX_IN_MEMORY_FILE_CONTENT_LENGTH];
   enum InMemoryFileType type;
   uint32_t childrenCount;
   struct InMemoryFileNode *children;
-} InMemoryFileNode;
+};
 
-InMemoryFileNode createInMemoryFile(
+struct InMemoryFileNode createInMemoryFile(
   char *name,
   char *content
 ) {
-  InMemoryFileNode InMemoryFileNode;
+  struct InMemoryFileNode InMemoryFileNode;
   strncopy(InMemoryFileNode.name, name, FILE_NAME_SIZE);
   strncopy(InMemoryFileNode.content, content, MAX_IN_MEMORY_FILE_CONTENT_LENGTH);
   InMemoryFileNode.length = strlen(InMemoryFileNode.content);
@@ -104,12 +104,12 @@ InMemoryFileNode createInMemoryFile(
   return InMemoryFileNode;
 }
 
-InMemoryFileNode createInMemoryDirectory(
+struct InMemoryFileNode createInMemoryDirectory(
   char *name,
   int childrenCount,
-  InMemoryFileNode *children
+  struct InMemoryFileNode *children
 ) {
-  InMemoryFileNode InMemoryFileNode;
+  struct InMemoryFileNode InMemoryFileNode;
   strncopy(InMemoryFileNode.name, name, FILE_NAME_SIZE);
   strncopy(InMemoryFileNode.content, "", MAX_IN_MEMORY_FILE_CONTENT_LENGTH);
   InMemoryFileNode.length = 0;
@@ -120,7 +120,7 @@ InMemoryFileNode createInMemoryDirectory(
   return InMemoryFileNode;
 }
 
-void mockPrintTreeDescription(InMemoryFileNode node, int childCount, int childrenCount, int depth) {
+void mockPrintTreeDescription(struct InMemoryFileNode node, int childCount, int childrenCount, int depth) {
   for (int i = 0 ; i < depth ; i++) {
     if (i % 2 == 0) {
       print_string("| ");
@@ -143,7 +143,7 @@ void mockPrintTreeDescription(InMemoryFileNode node, int childCount, int childre
   );
 }
 
-void mockPrintTreeRecursive(InMemoryFileNode node, int childCount, int childrenCount, int depth) {
+void mockPrintTreeRecursive(struct InMemoryFileNode node, int childCount, int childrenCount, int depth) {
   if (node.type == IN_MEMORY_FILE) {
     mockPrintTreeDescription(node, childCount, childrenCount, depth);
   } else {
@@ -155,7 +155,7 @@ void mockPrintTreeRecursive(InMemoryFileNode node, int childCount, int childrenC
   }
 }
 
-void printInMemoryTree(InMemoryFileNode node) {
+void printInMemoryTree(struct InMemoryFileNode node) {
   int depth = 0;
 
   print_string(".\n");
@@ -168,11 +168,11 @@ void printInMemoryTree(InMemoryFileNode node) {
   print_string("\n");
 }
 
-void readInMemoryFile(InMemoryFileNode node, char *source) {
+void readInMemoryFile(struct InMemoryFileNode node, char *source) {
   strncopy(source, node.content, MAX_IN_MEMORY_FILE_CONTENT_LENGTH);
 }
 
-void cat(InMemoryFileNode node) {
+void cat(struct InMemoryFileNode node) {
   if (node.type == IN_MEMORY_DIRECTORY) {
     print_string("%s is a directory\n", node.name);
     return;
@@ -184,7 +184,7 @@ void cat(InMemoryFileNode node) {
 }
 
 void filesystem_test() {
-  InMemoryFileNode helloFolderChildren[4] = {
+  struct InMemoryFileNode helloFolderChildren[4] = {
     createInMemoryFile(
       "a.txt",
       "the content of a"
@@ -203,23 +203,23 @@ void filesystem_test() {
     ),
   };
 
-  InMemoryFileNode helloFolder = createInMemoryDirectory(
+  struct InMemoryFileNode helloFolder = createInMemoryDirectory(
     "helloFolder",
     4,
     helloFolderChildren
   );
 
-  InMemoryFileNode helloWorldTxt = createInMemoryFile(
+  struct InMemoryFileNode helloWorldTxt = createInMemoryFile(
     "helloWorld.txt",
     "hello world, this is some content!"
   );
 
-  InMemoryFileNode rootChildren[2] = {
+  struct InMemoryFileNode rootChildren[2] = {
     helloFolder,
     helloWorldTxt
   };
 
-  InMemoryFileNode root = createInMemoryDirectory(
+  struct InMemoryFileNode root = createInMemoryDirectory(
     "root",
     2,
     rootChildren

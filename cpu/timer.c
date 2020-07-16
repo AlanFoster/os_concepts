@@ -9,7 +9,7 @@
 
 uint32_t tick = 0;
 
-static void timer_callback(__attribute__((unused)) InterruptEvent e) {
+static void timer_callback(__attribute__((unused)) struct interrupt_event e) {
     tick++;
 }
 

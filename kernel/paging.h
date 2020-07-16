@@ -14,7 +14,7 @@
 /**
  * The topmost paging structure
  */
-typedef struct PageDirectoryEntry {
+struct page_directory_entry {
     /**
      * 1 if the page is present in physical memory, 0 otherwise.
      * If this page is called, and this is zero, then a page fault will occurr.
@@ -75,12 +75,12 @@ typedef struct PageDirectoryEntry {
     **/
     uint32_t page_table_address: 20;
 
-} PageDirectoryEntry;
+};
 
 /**
  * The topmost paging structure
  */
-typedef struct PageTableEntry {
+struct page_table_entry {
     /**
      * 1 if the page is present in physical memory, 0 otherwise.
      * If this page is called, and this is zero, then a page fault will occurr.
@@ -141,7 +141,7 @@ typedef struct PageTableEntry {
     **/
     uint32_t page_address: 20;
 
-} PageTableEntry;
+};
 
 void init_paging();
 

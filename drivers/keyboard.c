@@ -159,7 +159,7 @@ int is_key_release(uint8_t scancode) {
     return scancode & 0x80;
 }
 
-static void keyboard_callback(__attribute__((unused)) InterruptEvent e) {
+static void keyboard_callback(__attribute__((unused)) struct interrupt_event e) {
     uint8_t status = port_byte_in(KEYBOARD_STATUS_PORT);
     uint8_t scancode;
     if (!has_buffer_available(status)) {
