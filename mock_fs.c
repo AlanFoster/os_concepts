@@ -297,6 +297,11 @@ void touch(ino_t root, char *name) {
 // Virtual file system
 ///////////////////////////////////////////////////////////////////////////
 
+typedef enum {
+  SUCCESS = 0,
+  ERROR_NOT_IMPLEMENTED = 1
+} result_code;
+
 #define MAX_FILE_DESCRIPTORS 14
 
 typedef uint32_t vfs_index;
@@ -580,14 +585,15 @@ struct vfs_directory_entry *vfs_find_directory(char *path) {
   return current_entry;
 }
 
-int vfs_mkdir(struct vfs_inode *inode, struct vfs_directory_entry *directory_entry) {
-  // if (inode->operations->mkdir != NULL) {
-  //   vfs_index index = inode->operations->mkdir(inode, directory_entry);
-  // }
-  return -1;
+result_code vfs_mkdir(struct vfs_inode *inode, struct vfs_directory_entry *directory_entry) {
+  if (inode->operations->mkdir != NULL) {
+    vfs_index index = inode->operations->mkdir(inode, directory_entry);
+    return SUCCESS;
+  }
+  return ERROR_NOT_IMPLEMENTED;
 }
 
-int mkdir(char *path) {
+result_code mkdir(char *path) {
   char *parentPath = parent_path(path);
   struct vfs_directory_entry *parent = vfs_find_directory(parentPath);
   // if (directory_entry == NULL) {
@@ -598,14 +604,7 @@ int mkdir(char *path) {
   strncopy(child->name, folderName, FILE_NAME_SIZE);
 
   parent->inode->operations->mkdir(parent->inode, child);
-
-  // TODO: Return a filedescriptor?
-  return 0;
-
-  // directory_entry->inode->operations->mkdir(directory_entry);
-
-  // struct vfs_inode *node =
-  // vfs_mkdir()
+  return SUCCESS;
 }
 
 int main(void) {
