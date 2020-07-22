@@ -51,12 +51,15 @@ void on_user_input(char *user_input) {
     } else if (strcmp(user_input, "divide_zero") == 0) {
         print_string(RED "about to divide by zero fault\n" RESET);
 
-        uint32_t explosion = 10 / 0;
+        uint32_t divisor = 0;
+        uint32_t divide_by_zero_expression = 10 / divisor;
+        print_string(RED "This line should not execute. Instead received: %d" RESET, divide_by_zero_expression);
     } else if (strcmp(user_input, "page_fault") == 0) {
         print_string(RED "about to page fault\n" RESET);
 
         uint32_t *ptr = (uint32_t*) 0xA0000000;
-        uint32_t do_page_fault = *ptr;
+        uint32_t page_fault_expression = *ptr;
+        print_string(RED "This line should not execute. Instead received %d\n" RESET, page_fault_expression);
     } else {
         print_string(RED "unknown command\n" RESET);
         print_help();

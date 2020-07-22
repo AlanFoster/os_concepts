@@ -1,4 +1,5 @@
 #include "mem.h"
+#include "../drivers/screen.h"
 #include <stdint.h>
 #define DEFAULT_KMALLOC_ADDR_POINTER 0x50000
 
@@ -8,8 +9,8 @@ void memory_copy(char *dest, char *source, int nbytes) {
     }
 }
 
-void memory_set(char *dest, char val, int amount) {
-    for (int i = 0; i < amount; i++) {
+void memory_set(char *dest, int val, size_t amount) {
+    for (size_t i = 0; i < amount; i++) {
         dest[i] = val;
     }
 }

@@ -12,7 +12,7 @@ struct page_table_entry *firstPageEntryTable;
 
 void init_paging() {
     pageDirectory = (struct page_directory_entry *)  kmalloc(sizeof(struct page_directory_entry) * DIRECTORY_SIZE, 1);
-    firstPageEntryTable = (struct PageTableEntry *) kmalloc(sizeof(struct page_table_entry) * ENTRY_SIZE, 1);
+    firstPageEntryTable = (struct page_table_entry *) kmalloc(sizeof(struct page_table_entry) * ENTRY_SIZE, 1);
 
     // Initialize the page directory to be empty
     for ( int i = 0 ; i < DIRECTORY_SIZE ; i++) {

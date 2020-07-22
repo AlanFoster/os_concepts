@@ -2,6 +2,7 @@
 #include "./isr.h"
 #include "./idt.h"
 #include "../drivers/ports.h"
+#include "../kernel/mem.h"
 #include <stdint.h>
 
 #define MASTER_COMMAND 0x20
