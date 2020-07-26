@@ -12,6 +12,8 @@
 #define MAX_IN_MEMORY_FILE_CONTENT_LENGTH 128
 #define MAX_INODE_CONTENT_SIZE 128
 
+#define read_offset uint32_t
+
 ///////////////////////////////////////////////////////////////
 // Helpers
 ///////////////////////////////////////////////////////////////
@@ -187,8 +189,7 @@ void writeContent(ino_t ino, char *buffer, int size) {
   node->direct_block_pointer_bytes[0] = block;
 }
 
-// TODO: Confirm what happens if you try to read more data than what's available
-void readContent(ino_t ino, char *buffer, uint32_t size) {
+ssize_t readContent(ino_t ino, char *buffer, uint32_t size, read_offset offset) {
   struct inode *node = inode_lookup(memoryChunk, ino);
 
   int readAmount;
@@ -199,7 +200,8 @@ void readContent(ino_t ino, char *buffer, uint32_t size) {
   }
 
   // TODO: find the right block correctly etc.
-  strncopy(buffer, node->direct_block_pointer_bytes[0], readAmount);
+  strncopy(buffer, ((node->direct_block_pointer_bytes[0]) + offset), readAmount);
+  return readAmount;
 }
 
 ino_t mkfolder(char *name, ino_t parent) {
@@ -276,7 +278,7 @@ void cat(ino_t root, char *name) {
   ino_t ino = find(root, name);
   struct inode *node = inode_lookup(memoryChunk, ino);
   char content[BUFSIZ];
-  readContent(ino, content, node->length);
+  readContent(ino, content, node->length, 0);
   printf("The file content is: %s\n", content);
 }
 
@@ -303,7 +305,6 @@ typedef enum {
 } result_code;
 
 #define MAX_FILE_DESCRIPTORS 14
-#define read_offset uint32_t
 
 typedef size_t vfs_index;
 
@@ -342,7 +343,8 @@ struct vfs_directory_entry {
 
 struct vfs_inode_operations {
   struct vfs_directory_entry *(*mkdir)(struct vfs_inode*, struct vfs_directory_entry*);
-  struct vfs_directory_entry *(*locate)(struct vfs_inode*, char *name);
+  // For some reason this will return null, or a negative error code
+  struct vfs_directory_entry *(*lookup)(struct vfs_inode*, struct directory_entry*);
 };
 
 struct vfs_file {
@@ -359,7 +361,8 @@ struct vfs_file {
 };
 
 struct vfs_file_operations {
-  ssize_t (*read)(struct vfs_file*, char *buffer, size_t size);
+  ssize_t (*read)(struct vfs_file*, char *buffer, size_t size, read_offset offset);
+  result_code (*open)(struct inode *, struct file *);
 };
 ///////////////////////////////////////////////////////////////////////////
 // User space values
@@ -405,23 +408,6 @@ static struct environment *environment;
 //   return NULL;
 // }
 
-struct vfs_directory_entry *in_memory_locate(struct vfs_directory_entry *parent, char *name) {
-  struct inode *node = inode_lookup(memoryChunk, parent->inode->index);
-
-  for (int i = 0, length = node->length ; i < length; i++) {
-    struct directory_entry *entry = node->direct_block_pointer_directories[i];
-    if (strcmp(entry->d_name, name) == 0) {
-      struct vfs_directory_entry *result = (struct fs_directory_entry*) malloc(sizeof(struct vfs_directory_entry));
-      result->inode = entry->d_ino;
-      result->parent = parent;
-      strncopy(result->name, entry->d_name, MAX_FILE_NAME);
-
-      return entry->d_ino;
-    }
-  }
-
-  return NULL;
-}
 
 static struct vfs_directory_entry *in_memory_mkdir(struct vfs_inode* node, struct vfs_directory_entry *entry) {
   struct inode *parentNode = inode_lookup(memoryChunk, node->index);
@@ -442,16 +428,22 @@ static struct vfs_directory_entry *in_memory_mkdir(struct vfs_inode* node, struc
   (parentNode->length)++;
 }
 
+static ssize_t *in_memory_read(struct vfs_file* file, char *buf, ssize_t bytes_to_read, read_offset offset) {
+  return readContent(file->inode->index, buf, bytes_to_read, offset);
+}
+
+// Forward reference
+struct vfs_directory_entry *in_memory_lookup(struct vfs_inode *parent, struct vfs_directory_entry *entry);
 static struct vfs_inode_operations inode_operations = {
   .mkdir = in_memory_mkdir,
-  .locate = in_memory_locate
+  .lookup = in_memory_lookup
 };
 
 static struct vfs_file_operations file_operations = {
-  // read .= NULL
+  .read = in_memory_read
 };
 
-struct vfs_inode *inmemory_alloc_node(struct vfs_super_block *super_block) {
+struct vfs_inode *in_memory_alloc_node(struct vfs_super_block *super_block) {
   struct vfs_inode *vfs_inode = malloc(sizeof(struct vfs_inode));
   memset(vfs_inode, 0, sizeof(struct vfs_inode));
   vfs_inode->super_block = super_block;
@@ -461,8 +453,29 @@ struct vfs_inode *inmemory_alloc_node(struct vfs_super_block *super_block) {
   return vfs_inode;
 };
 
+struct vfs_directory_entry *in_memory_lookup(struct vfs_inode *parent, struct vfs_directory_entry *entry) {
+  struct inode *node = inode_lookup(memoryChunk, parent->index);
+
+  for (int i = 0, length = node->length ; i < length; i++) {
+    struct directory_entry *current_entry = node->direct_block_pointer_directories[i];
+    if (strcmp(current_entry->d_name, entry->name) == 0) {
+
+      struct vfs_inode *vfs_node = in_memory_alloc_node(parent->super_block);
+      vfs_node->index = current_entry->d_ino;
+
+      entry->inode = vfs_node;
+      entry->parent = parent;
+      strncopy(entry->name, current_entry->d_name, MAX_FILE_NAME);
+
+      return entry;
+    }
+  }
+
+  return NULL;
+}
+
 static struct vfs_super_block_operations super_block_operations = {
-  .alloc_node = inmemory_alloc_node
+  .alloc_node = in_memory_alloc_node
 };
 
 struct vfs_super_block* init_super_block(ino_t root_ino) {
@@ -477,7 +490,7 @@ struct vfs_super_block* init_super_block(ino_t root_ino) {
 
   struct inode *node = inode_lookup(memoryChunk, root_ino);
 
-  struct vfs_inode *root_inode = inmemory_alloc_node(super_block);
+  struct vfs_inode *root_inode = in_memory_alloc_node(super_block);
   root_inode->index = ROOT_INODE;
   root_inode->block_count = node->length;
   root_inode->operations = &inode_operations;
@@ -498,6 +511,7 @@ struct vfs_super_block* init_super_block(ino_t root_ino) {
 // ../foo = foo
 // . = invalid
 // / = invalid
+// foo.txt = txt.
 // foo/bar = bar - not supported
 char *next_path_segment(char *path) {
   bool hasSeenSlash = false;
@@ -522,6 +536,10 @@ char *next_path_segment(char *path) {
     }
 
     length++;
+  }
+
+  if (!hasSeenSlash) {
+    return path;
   }
 
   char *result = (char *) malloc(length);
@@ -560,6 +578,7 @@ char *parent_path(char *path) {
   result[length + 1] = '\0';
   return result;
 }
+
 char *last_path_segment(char *path) {
   char *startPointer = path;
   char *endPointer = path;
@@ -580,27 +599,58 @@ char *last_path_segment(char *path) {
   return startPointer;
 }
 
-struct vfs_directory_entry *vfs_locate(char *path) {
-  struct vfs_directory_entry *current_entry = NULL;
+char *remaining_path_segments(char *path) {
+  char *startPointer = path;
+
+  for (;;) {
+    if (*startPointer == '/') {
+      startPointer++;
+      break;
+    }
+    if (*startPointer == '\0') {
+      break;
+    }
+
+    startPointer++;
+  }
+
+  return startPointer;
+}
+
+struct vfs_directory_entry *alloc_vfs_directory_entry(struct vfs_directory_entry *parent, char *name) {
+  struct vfs_directory_entry *entry = (struct vfs_directory_entry*) malloc(sizeof(struct vfs_directory_entry));
+  strncopy(entry->name, name, FILENAME_MAX);
+  return entry;
+}
+
+struct vfs_directory_entry *vfs_lookup(char *path) {
+  struct vfs_directory_entry *parent;
+
+  char *remaining_path;
   if (*path == '/') {
-    current_entry = environment->file_system->root;
+    parent = environment->file_system->root;
+    // Skip the root `/` as we've resolved it now
+    remaining_path = remaining_path_segments(path);
   } else {
-    current_entry = environment->file_system->current_working_directory;
+    parent = environment->file_system->current_working_directory;
+    remaining_path = path;
   }
 
   for(;;) {
-    char *next_segment = next_path_segment(path);
-    if (strlen(next_segment) == 0) {
-      return current_entry;
+    char *next_segment = next_path_segment(remaining_path);
+    struct vfs_directory_entry *child = alloc_vfs_directory_entry(parent, next_segment);
+    parent = parent->inode->operations->lookup(parent->inode, child);
+    if (!parent) {
+      return parent;
     }
-    current_entry = current_entry->inode->operations->locate(current_entry, next_segment);
 
-    if (!path) {
-      return current_entry;
+    remaining_path = remaining_path_segments(remaining_path);
+    if (!*remaining_path) {
+      return parent;
     }
   }
 
-  return current_entry;
+  return parent;
 }
 
 result_code vfs_mkdir(struct vfs_inode *inode, struct vfs_directory_entry *directory_entry) {
@@ -613,7 +663,7 @@ result_code vfs_mkdir(struct vfs_inode *inode, struct vfs_directory_entry *direc
 
 result_code mkdir(char *path) {
   char *parentPath = parent_path(path);
-  struct vfs_directory_entry *parent = vfs_locate(parentPath);
+  struct vfs_directory_entry *parent = vfs_lookup(parentPath);
   // if (directory_entry == NULL) {
   // }
 
@@ -625,15 +675,28 @@ result_code mkdir(char *path) {
   return SUCCESS;
 }
 
+struct vfs_file *alloc_empty_file() {
+  // TODO: Properly allocate files, reusing them if possible etc.
+  struct vfs_file *file = (struct vfs_file*) malloc(sizeof(struct vfs_file));
+  memset(file, 0, sizeof(struct vfs_file));
+
+  return file;
+}
+
 struct vfs_file *open_file(const char *filename) {
-    struct vfs_directory_entry *entry = vfs_locate(filename);
+    struct vfs_directory_entry *entry = vfs_lookup(filename);
 
     // TODO: Properly allocate files
-    struct vfs_file *file = (struct vfs_file*) malloc(sizeof(struct vfs_file));
+    struct vfs_file *file = alloc_empty_file();
     file->inode = entry->inode;
     file->directory_entry = entry;
     file->current_read_offset = 0;
     file->file_operations = entry->inode->file_operations;
+
+    if (entry->inode->file_operations->open != NULL) {
+      // TODO: Correctly detect error code
+      entry->inode->file_operations->open(entry->inode, file);
+    }
 
     return file;
 };
@@ -653,32 +716,46 @@ file_descriptor_index open(char *path) {
   return index;
 }
 
+ssize_t read(file_descriptor_index index, char *buffer, size_t bytes_to_read) {
+  // TODO: In the future this shouldn't be a finite array.
+  struct vfs_file *file = &environment->file_descriptor_table->files[index];
+  ssize_t amount_read = file->file_operations->read(file, buffer, bytes_to_read, file->current_read_offset);
+  file->current_read_offset += amount_read;
+  return amount_read;
+}
+
 int main(void) {
   // TODO: In the future this would read from ext etc.
   ino_t root = initRamdisk();
   struct vfs_super_block *super_block = init_super_block(root);
 
-  // char tests[][20] = {
-  //   "/",
-  //   "/foo",
-  //   "/foo/bar",
-  //   "foo",
-  //   "/"
-  // };
+  char tests[][20] = {
+    // "/",
+    // "/foo",
+    // "/foo/bar",
+    // "/foo/bar/baz.txt",
+    // "foo/bar/baz.txt",
+    // "bar/baz.txt",
+    // "foo",
+    // "/helloWorld.txt",
+    "helloWorld.txt",
+    // "/"
+  };
 
-  // for (int i = 0 ; i < sizeof(tests) / sizeof(tests[0]); i++) {
-  //   printf("%s\n", tests[i]);
-  //   printf("-------------\n");
-  //   printf("next = %s\n", next_path_segment(tests[i]));
-  //   printf("last = %s\n", last_path_segment(tests[i]));
-  //   printf("parent = %s\n", parent_path(tests[i]));
-  //   printf("\n\n");
-  // }
+  for (int i = 0 ; i < sizeof(tests) / sizeof(tests[0]); i++) {
+    printf("%s\n", tests[i]);
+    printf("-------------\n");
+    printf("next = %s\n", next_path_segment(tests[i]));
+    printf("last = %s\n", last_path_segment(tests[i]));
+    printf("parent = %s\n", parent_path(tests[i]));
+    printf("remaining = %s\n", remaining_path_segments(tests[i]));
+    printf("\n\n");
+  }
 
-  // char path[] = "/foo/bar";
-  // printf("%s\n", path);
-  // printf("next segment: %s\n", (path));
-  // printf("last segment: %s\n", last_path_segment(path));
+  char path[] = "/foo/bar";
+  printf("%s\n", path);
+  printf("next segment: %s\n", (path));
+  printf("last segment: %s\n", last_path_segment(path));
 
   // Create the global file system and assign the init ramdisk
   environment = (struct environment*) malloc(sizeof(struct environment));
@@ -703,7 +780,7 @@ int main(void) {
 
   super_block->operations->alloc_node(super_block);
 
-  mkdir("/foo");
+  // mkdir("/foo");
 
   // VFSNode root =
   // vfs_ls(root);
@@ -716,6 +793,23 @@ int main(void) {
   // ls(root, "subFolder");
   // print_string("> touch newFile.txt\n");
   // touch(root, "newFile.txt");
-  // print_string("> ls\n");
+  print_string("> ls\n");
   ls(root, "/");
+
+  file_descriptor_index helloWorldTxtFd = open("/helloWorld.txt");
+  printf("Successfully opened the file with %d\n", helloWorldTxtFd);
+
+  // read all data naively one character at a time
+  char buf[100];
+  memset(buf, 0, 100);
+  char current;
+  for ( int i = 0; i < sizeof(buf) / sizeof(char); i++) {
+    read(helloWorldTxtFd, &current, 1);
+    buf[i] = current;
+    if (current == '\0') {
+      break;
+    }
+  }
+
+  printf("The content of file descriptor %d was %s\n", helloWorldTxtFd, buf);
 }
