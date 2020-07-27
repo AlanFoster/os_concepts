@@ -27,6 +27,14 @@ char *strncopy(char *destination, char *source, size_t maximum) {
   return destination;
 }
 
+void *memcpy(void * destination, const void * source, size_t num) {
+  unsigned char *dst = (unsigned char *) destination;
+  unsigned char *src = (unsigned char *) source;
+  for (size_t i = 0 ; i < num ; i ++) {
+    dst[i] = src[i];
+  }
+}
+
 size_t strlen(const char *str) {
     int i = 0;
     while (str[i] != '\0') {
@@ -184,7 +192,7 @@ void writeContent(ino_t ino, char *buffer, int size) {
   }
 
   char *block =  (char *) block_lookup(memoryChunk, blockCount++);
-  strncopy(block, buffer, BLOCK_SIZE);
+  memcpy(block, buffer, BLOCK_SIZE);
   node->length = size;
   node->direct_block_pointer_bytes[0] = block;
 }
@@ -200,7 +208,7 @@ ssize_t readContent(ino_t ino, char *buffer, uint32_t size, read_offset offset) 
   }
 
   // TODO: find the right block correctly etc.
-  strncopy(buffer, ((node->direct_block_pointer_bytes[0]) + offset), readAmount);
+  memcpy(buffer, ((node->direct_block_pointer_bytes[0]) + offset), readAmount);
   return readAmount;
 }
 
@@ -263,7 +271,7 @@ ino_t find(ino_t root, char *name) {
   return NULL;
 }
 
-void ls(ino_t root, char *name) {
+void in_memory_ls(ino_t root, char *name) {
   ino_t ino = find(root, name);
   struct inode *node = inode_lookup(memoryChunk, ino);
   printf("type: %d\n", node->type_and_permissions);
@@ -274,7 +282,7 @@ void ls(ino_t root, char *name) {
   }
 }
 
-void cat(ino_t root, char *name) {
+void in_memory_cat(ino_t root, char *name) {
   ino_t ino = find(root, name);
   struct inode *node = inode_lookup(memoryChunk, ino);
   char content[BUFSIZ];
@@ -724,6 +732,29 @@ ssize_t read(file_descriptor_index index, char *buffer, size_t bytes_to_read) {
   return amount_read;
 }
 
+void ls(char *path) {
+  file_descriptor_index fd = open(path);
+}
+
+void cat(char *path) {
+  file_descriptor_index fd = open(path);
+  // TODO: Max this more efficient and don't read one character at a time
+  char current = '\0';
+  char second_last = '\0';
+
+  do {
+    second_last = current;
+    read(fd, &current, 1);
+    if (current != '\0') {
+      print_string("%c", current);
+    }
+  } while(current != '\0');
+
+  if (second_last != '\n') {
+    print_string("\n");
+  }
+}
+
 int main(void) {
   // TODO: In the future this would read from ext etc.
   ino_t root = initRamdisk();
@@ -794,22 +825,13 @@ int main(void) {
   // print_string("> touch newFile.txt\n");
   // touch(root, "newFile.txt");
   print_string("> ls\n");
-  ls(root, "/");
+  ls("/subFolder");
 
-  file_descriptor_index helloWorldTxtFd = open("/helloWorld.txt");
-  printf("Successfully opened the file with %d\n", helloWorldTxtFd);
+  // file_descriptor_index helloWorldTxtFd = open("/helloWorld.txt");
+  // printf("Successfully opened the file with %d\n", helloWorldTxtFd);
 
-  // read all data naively one character at a time
-  char buf[100];
-  memset(buf, 0, 100);
-  char current;
-  for ( int i = 0; i < sizeof(buf) / sizeof(char); i++) {
-    read(helloWorldTxtFd, &current, 1);
-    buf[i] = current;
-    if (current == '\0') {
-      break;
-    }
-  }
+  // printf("The content of file descriptor %d was %s\n", helloWorldTxtFd, buf);
 
-  printf("The content of file descriptor %d was %s\n", helloWorldTxtFd, buf);
+  print_string("> cat /helloWorld.txt\n");
+  cat("/helloWorld.txt");
 }
