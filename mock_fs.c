@@ -27,6 +27,16 @@ char *strncopy(char *destination, char *source, size_t maximum) {
   return destination;
 }
 
+// Placeholder for copying data from kernel space into user space
+unsigned long copy_to_user(void *destination, const void * source, size_t num ) {
+  memcpy(destination, source, num);
+}
+
+// Placeholder for copying data from userspace into kernel space
+unsigned long copy_from_user(void *destination, const void * source, size_t num ) {
+  memcpy(destination, source, num);
+}
+
 void *memcpy(void * destination, const void * source, size_t num) {
   unsigned char *dst = (unsigned char *) destination;
   unsigned char *src = (unsigned char *) source;
@@ -192,7 +202,7 @@ void writeContent(ino_t ino, char *buffer, int size) {
   }
 
   char *block =  (char *) block_lookup(memoryChunk, blockCount++);
-  memcpy(block, buffer, BLOCK_SIZE);
+  copy_from_user(block, buffer, BLOCK_SIZE);
   node->length = size;
   node->direct_block_pointer_bytes[0] = block;
 }
@@ -208,7 +218,7 @@ ssize_t readContent(ino_t ino, char *buffer, uint32_t size, rw_offset offset) {
   }
 
   // TODO: find the right block correctly etc.
-  memcpy(buffer, ((node->direct_block_pointer_bytes[0]) + offset), readAmount);
+  copy_to_user(buffer, ((node->direct_block_pointer_bytes[0]) + offset), readAmount);
   return readAmount;
 }
 
@@ -370,6 +380,7 @@ struct vfs_file {
 
 struct vfs_file_operations {
   ssize_t (*read)(struct vfs_file*, char *buffer, size_t size, rw_offset offset);
+  ssize_t (*write)(struct vfs_file*, char *buffer, size_t size, rw_offset offset);
   result_code (*open)(struct inode *, struct vfs_file *);
 };
 ///////////////////////////////////////////////////////////////////////////
