@@ -370,7 +370,7 @@ struct vfs_file {
 
 struct vfs_file_operations {
   ssize_t (*read)(struct vfs_file*, char *buffer, size_t size, read_offset offset);
-  result_code (*open)(struct inode *, struct file *);
+  result_code (*open)(struct inode *, struct vfs_file *);
 };
 ///////////////////////////////////////////////////////////////////////////
 // User space values
