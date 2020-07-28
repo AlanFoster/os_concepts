@@ -12,7 +12,7 @@
 #define MAX_IN_MEMORY_FILE_CONTENT_LENGTH 128
 #define MAX_INODE_CONTENT_SIZE 128
 
-#define read_offset uint32_t
+#define rw_offset uint32_t
 
 ///////////////////////////////////////////////////////////////
 // Helpers
@@ -197,7 +197,7 @@ void writeContent(ino_t ino, char *buffer, int size) {
   node->direct_block_pointer_bytes[0] = block;
 }
 
-ssize_t readContent(ino_t ino, char *buffer, uint32_t size, read_offset offset) {
+ssize_t readContent(ino_t ino, char *buffer, uint32_t size, rw_offset offset) {
   struct inode *node = inode_lookup(memoryChunk, ino);
 
   int readAmount;
@@ -365,11 +365,11 @@ struct vfs_file {
   // The maximum number of bytes which can be read at a time
   uint32_t max_read_size;
 
-  read_offset current_read_offset;
+  rw_offset current_offset;
 };
 
 struct vfs_file_operations {
-  ssize_t (*read)(struct vfs_file*, char *buffer, size_t size, read_offset offset);
+  ssize_t (*read)(struct vfs_file*, char *buffer, size_t size, rw_offset offset);
   result_code (*open)(struct inode *, struct vfs_file *);
 };
 ///////////////////////////////////////////////////////////////////////////
@@ -436,7 +436,7 @@ static struct vfs_directory_entry *in_memory_mkdir(struct vfs_inode* node, struc
   (parentNode->length)++;
 }
 
-static ssize_t *in_memory_read(struct vfs_file* file, char *buf, ssize_t bytes_to_read, read_offset offset) {
+static ssize_t *in_memory_read(struct vfs_file* file, char *buf, ssize_t bytes_to_read, rw_offset offset) {
   return readContent(file->inode->index, buf, bytes_to_read, offset);
 }
 
@@ -698,7 +698,7 @@ struct vfs_file *open_file(const char *filename) {
     struct vfs_file *file = alloc_empty_file();
     file->inode = entry->inode;
     file->directory_entry = entry;
-    file->current_read_offset = 0;
+    file->current_offset = 0;
     file->file_operations = entry->inode->file_operations;
 
     if (entry->inode->file_operations->open != NULL) {
@@ -715,7 +715,7 @@ file_descriptor_index open(char *path) {
   struct file_descriptor_table *file_descriptor_table = environment->file_descriptor_table;
   file_descriptor_index index = (file_descriptor_table->current_size);
   file_descriptor_table->current_size += 1;
-  file_descriptor_table->files[index].current_read_offset = file->current_read_offset;
+  file_descriptor_table->files[index].current_offset = file->current_offset;
   file_descriptor_table->files[index].max_read_size = file->max_read_size;
   file_descriptor_table->files[index].directory_entry = file->directory_entry;
   file_descriptor_table->files[index].inode = file->inode;
@@ -727,8 +727,8 @@ file_descriptor_index open(char *path) {
 ssize_t read(file_descriptor_index index, char *buffer, size_t bytes_to_read) {
   // TODO: In the future this shouldn't be a finite array.
   struct vfs_file *file = &environment->file_descriptor_table->files[index];
-  ssize_t amount_read = file->file_operations->read(file, buffer, bytes_to_read, file->current_read_offset);
-  file->current_read_offset += amount_read;
+  ssize_t amount_read = file->file_operations->read(file, buffer, bytes_to_read, file->current_offset);
+  file->current_offset += amount_read;
   return amount_read;
 }
 
