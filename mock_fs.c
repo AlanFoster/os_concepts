@@ -318,6 +318,13 @@ void touch(ino_t root, char *name) {
 ///////////////////////////////////////////////////////////////////////////
 
 typedef enum {
+  O_RDONLY = 0,
+  O_WRONLY = 1,
+  O_CREATE = 2,
+  O_TRUNC = 4,
+} open_flag;
+
+typedef enum {
   SUCCESS = 0,
   ERROR_NOT_IMPLEMENTED = 1
 } result_code;
@@ -369,6 +376,10 @@ struct vfs_file {
   struct vfs_file_operations *file_operations;
   // The current file's vfs_inode
   struct vfs_inode *inode;
+
+  // The O_XXX flags that were assigned when `open` was called
+  open_flag open_flags;
+
   // The current associated vfs_directory_entry
   struct vfs_directory_entry *directory_entry;
 
@@ -386,6 +397,11 @@ struct vfs_file_operations {
 ///////////////////////////////////////////////////////////////////////////
 // User space values
 ///////////////////////////////////////////////////////////////////////////
+
+
+// TODO: mode_t flags - https://jameshfisher.com/2017/02/24/what-is-mode_t/
+// TODO: http://tldp.org/LDP/lki/lki-3.html
+// typedef unsigned short mode_t;
 
 #define MAX_OPENED_FILES 32
 typedef uint32_t file_descriptor_index;
@@ -702,7 +718,8 @@ struct vfs_file *alloc_empty_file() {
   return file;
 }
 
-struct vfs_file *open_file(const char *filename) {
+struct vfs_file *open_file(const char *filename, open_flag open_flags) {
+  if (!(open_flags & O_CREATE)) {
     struct vfs_directory_entry *entry = vfs_lookup(filename);
 
     // TODO: Properly allocate files
@@ -711,6 +728,7 @@ struct vfs_file *open_file(const char *filename) {
     file->directory_entry = entry;
     file->current_offset = 0;
     file->file_operations = entry->inode->file_operations;
+    file->open_flags = open_flags;
 
     if (entry->inode->file_operations->open != NULL) {
       // TODO: Correctly detect error code
@@ -718,10 +736,21 @@ struct vfs_file *open_file(const char *filename) {
     }
 
     return file;
+  };
+
+  if (open_flags & O_CREATE) {
+    char *folder_name = last_path_segment(filename);
+    struct vfs_directory_entry *entry = vfs_lookup(filename);
+
+    entry->inode->file_operations->open
+
+
+  }
 };
 
-file_descriptor_index open(char *path) {
-  struct vfs_file *file = open_file(path);
+// TODO: Support truncation / create flags etc.
+file_descriptor_index open(char *path, open_flag open_flag) {
+  struct vfs_file *file = open_file(path, open_flag);
   // TODO: Properly allocate files
   struct file_descriptor_table *file_descriptor_table = environment->file_descriptor_table;
   file_descriptor_index index = (file_descriptor_table->current_size);
@@ -743,12 +772,16 @@ ssize_t read(file_descriptor_index index, char *buffer, size_t bytes_to_read) {
   return amount_read;
 }
 
+void close(file_descriptor_index fd) {
+  // TODO
+}
+
 void ls(char *path) {
-  file_descriptor_index fd = open(path);
+  // file_descriptor_index fd = open(path);
 }
 
 void cat(char *path) {
-  file_descriptor_index fd = open(path);
+  file_descriptor_index fd = open(path, O_RDONLY);
   // TODO: Max this more efficient and don't read one character at a time
   char current = '\0';
   char second_last = '\0';
@@ -764,6 +797,13 @@ void cat(char *path) {
   if (second_last != '\n') {
     print_string("\n");
   }
+
+  close(fd);
+}
+
+void mkfile(char *path) {
+  int fd = open(path, O_CREATE);
+  close(fd);
 }
 
 int main(void) {
@@ -843,6 +883,13 @@ int main(void) {
 
   // printf("The content of file descriptor %d was %s\n", helloWorldTxtFd, buf);
 
-  print_string("> cat /helloWorld.txt\n");
-  cat("/helloWorld.txt");
+  // print_string("> cat /helloWorld.txt\n");
+  // cat("/helloWorld.txt");
+
+  // print_string("cp /helloWorld.txt /newFile.txt");
+  // cp("/helloWorld.txt", "/newFile.txt");
+  // cat("/newFile.txt");
+
+  print_string("mkfile /touchedFile.txt");
+  mkfile("/touchedFile.txt");
 }
