@@ -320,8 +320,9 @@ void touch(ino_t root, char *name) {
 typedef enum {
   O_RDONLY = 0,
   O_WRONLY = 1,
-  O_CREATE = 2,
-  O_TRUNC = 4,
+  O_RWDR = 2,
+  O_CREATE = 4,
+  O_TRUNC = 8,
 } open_flag;
 
 typedef enum {
@@ -366,8 +367,15 @@ struct vfs_directory_entry {
   struct vfs_directory_entry *parent;
 };
 
+typedef enum {
+  S_IRUSR = 0
+} vfs_permissions;
+
 struct vfs_inode_operations {
   struct vfs_directory_entry *(*mkdir)(struct vfs_inode*, struct vfs_directory_entry*);
+  // TODO: Add permissions to files
+  struct vfs_directory_entry *(*create)(struct vfs_inode*, struct vfs_directory_entry* /*, vfs_permissions */);
+
   // For some reason this will return null, or a negative error code
   struct vfs_directory_entry *(*lookup)(struct vfs_inode*, struct directory_entry*);
 };
@@ -469,9 +477,11 @@ static ssize_t *in_memory_read(struct vfs_file* file, char *buf, ssize_t bytes_t
 
 // Forward reference
 struct vfs_directory_entry *in_memory_lookup(struct vfs_inode *parent, struct vfs_directory_entry *entry);
+struct vfs_directory_entry *in_memory_create(struct vfs_inode *parent, struct vfs_directory_entry *entry);
 static struct vfs_inode_operations inode_operations = {
   .mkdir = in_memory_mkdir,
-  .lookup = in_memory_lookup
+  .lookup = in_memory_lookup,
+  .create = in_memory_create
 };
 
 static struct vfs_file_operations file_operations = {
@@ -487,6 +497,34 @@ struct vfs_inode *in_memory_alloc_node(struct vfs_super_block *super_block) {
 
   return vfs_inode;
 };
+
+struct vfs_directory_entry *in_memory_create(struct vfs_inode* node, struct vfs_directory_entry *entry /*, permissions */) {
+  struct inode *parentNode = inode_lookup(memoryChunk, node->index);
+  // if (isDirectory(parentNode)) {
+    // Detect valid
+  // }
+
+  // Create the new directory entry
+
+  int index = blockCount++;
+  struct directory_entry *in_memory_entry = (struct directory_entry *) directory_entry_lookup(memoryChunk, index);
+
+  strncopy(in_memory_entry->d_name, entry->name, MAX_FILE_NAME);
+  in_memory_entry->d_namelen = strlen(entry->name);
+  in_memory_entry->d_ino = index;
+
+  // Store a reference to the newly created directory entry within the parent inode
+  parentNode->direct_block_pointer_directories[parentNode->length] = entry;
+  (parentNode->length)++;
+
+  // Copy the inode details into the vfs_directory entry
+  struct vfs_inode *new_inode = in_memory_alloc_node(node->super_block);
+  new_inode->block_count = 0;
+  new_inode->index = index;
+  entry->inode = new_inode;
+
+  return entry;
+}
 
 struct vfs_directory_entry *in_memory_lookup(struct vfs_inode *parent, struct vfs_directory_entry *entry) {
   struct inode *node = inode_lookup(memoryChunk, parent->index);
@@ -614,6 +652,8 @@ char *parent_path(char *path) {
   return result;
 }
 
+// Return the last value of a path:
+// /foo/bar/baz => baz
 char *last_path_segment(char *path) {
   char *startPointer = path;
   char *endPointer = path;
@@ -666,6 +706,9 @@ struct vfs_directory_entry *vfs_lookup(char *path) {
     parent = environment->file_system->root;
     // Skip the root `/` as we've resolved it now
     remaining_path = remaining_path_segments(path);
+    if (!*remaining_path){
+      return parent;
+    }
   } else {
     parent = environment->file_system->current_working_directory;
     remaining_path = path;
@@ -739,16 +782,38 @@ struct vfs_file *open_file(const char *filename, open_flag open_flags) {
   };
 
   if (open_flags & O_CREATE) {
-    char *folder_name = last_path_segment(filename);
     struct vfs_directory_entry *entry = vfs_lookup(filename);
+    if (!entry) {
+      char *folder_name = parent_path(filename);
+      char *file_name = last_path_segment(filename);
+      struct vfs_directory_entry *directory = vfs_lookup(folder_name);
 
-    entry->inode->file_operations->open
+      struct vfs_directory_entry new_entry;
+      strncopy(new_entry.name, file_name, MAX_FILE_NAME);
+      new_entry.parent = directory;
 
+      entry = directory->inode->operations->create(directory->inode, &new_entry);
+    }
 
+    // TODO: Properly allocate files
+    struct vfs_file *file = alloc_empty_file();
+    file->inode = entry->inode;
+    file->directory_entry = entry;
+    file->current_offset = 0;
+    file->file_operations = entry->inode->file_operations;
+    file->open_flags = open_flags;
+
+    if (entry->inode->file_operations->open != NULL) {
+      // TODO: Correctly detect error code
+      entry->inode->file_operations->open(entry->inode, file);
+    }
+
+    return file;
   }
 };
 
 // TODO: Support truncation / create flags etc.
+// TODO: Add permissions to files
 file_descriptor_index open(char *path, open_flag open_flag) {
   struct vfs_file *file = open_file(path, open_flag);
   // TODO: Properly allocate files
@@ -782,7 +847,7 @@ void ls(char *path) {
 
 void cat(char *path) {
   file_descriptor_index fd = open(path, O_RDONLY);
-  // TODO: Max this more efficient and don't read one character at a time
+  // TODO: Make this more efficient and don't read one character at a time
   char current = '\0';
   char second_last = '\0';
 
@@ -875,7 +940,7 @@ int main(void) {
   // ls(root, "subFolder");
   // print_string("> touch newFile.txt\n");
   // touch(root, "newFile.txt");
-  print_string("> ls\n");
+  print_string("> ls /subFolder\n");
   ls("/subFolder");
 
   // file_descriptor_index helloWorldTxtFd = open("/helloWorld.txt");
@@ -890,6 +955,9 @@ int main(void) {
   // cp("/helloWorld.txt", "/newFile.txt");
   // cat("/newFile.txt");
 
-  print_string("mkfile /touchedFile.txt");
+  print_string("mkfile /touchedFile.txt\n");
   mkfile("/touchedFile.txt");
+
+  print_string("> ls /\n");
+  ls("/");
 }
